@@ -1,0 +1,9 @@
+LICENSE
+README.md
+setup.py
+models/__init__.py
+models/architectures.py
+native_binarization.egg-info/PKG-INFO
+native_binarization.egg-info/SOURCES.txt
+native_binarization.egg-info/dependency_links.txt
+native_binarization.egg-info/top_level.txt
