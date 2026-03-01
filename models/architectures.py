@@ -233,7 +233,7 @@ class ResUNet_W1A16(nn.Module):
 # ==========================================
 # This group targets full binarization: binary activations + binary weights.
 # That is much harder to optimize; special gradient surrogates and careful normalization are important.
-# Your code includes a custom binary activation with a clipped-gradient STE and a BitConv variant without centering.
+# This code includes a custom binary activation with a clipped-gradient STE and a BitConv variant without centering.
 
 
 class BinaryActivation_BNN(torch.autograd.Function):
