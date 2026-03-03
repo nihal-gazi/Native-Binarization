@@ -321,9 +321,7 @@ class ResUNet_W1A1(nn.Module):
     Full BNN UNet: binary activations + binary weights.
     - time MLP uses GELU instead of ReLU/SiLU — minor choice.
     - Because everything is binary, BatchNorm placement, initialization, and learning rates are critical.
-    - Warning: training this reliably is harder; expect to need longer tuning and possibly auxiliary tricks:
-        * per-channel learnable scaling factors (gamma), alternative gradient surrogates,
-        * replace BatchNorm with GroupNorm or add extra learnable scale at binarization.
+  
     """
     def __init__(self):
         super().__init__()
