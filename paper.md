@@ -12,9 +12,9 @@ Deploying generative diffusion models on resource-constrained edge devices is se
 
 ## I. Introduction
 
-The unprecedented generative potential of denoising diffusion models has ushered in a paradigm shift in artificial intelligence. Denoising Diffusion Probabilistic Models (DDPMs) \[Ho et al., 2020\] now achieve state-of-the-art image synthesis quality across diverse domains, yet their utilization remains fundamentally dependent on high-performance floating-point hardware. As the necessity for edge computing and on-device AI integration increases, the thermodynamic constraints of traditional floating-point arithmetic become a critical barrier: running a 1,000-step diffusion sampling loop on a mobile or IoT device under standard FP16 precision is presently intractable.
+The unprecedented generative potential of denoising diffusion models has ushered in a paradigm shift in artificial intelligence. Denoising Diffusion Probabilistic Models (DDPMs) \cite{ho2020ddpm} now achieve state-of-the-art image synthesis quality across diverse domains, yet their utilization remains fundamentally dependent on high-performance floating-point hardware. As the necessity for edge computing and on-device AI integration increases, the thermodynamic constraints of traditional floating-point arithmetic become a critical barrier: running a 1,000-step diffusion sampling loop on a mobile or IoT device under standard FP16 precision is presently intractable.
 
-Extreme quantization - specifically, 1-bit binarization, where 16-bit or 32-bit floating-point weights are compressed to a single bit - promises massive compression ratios and order-of-magnitude reductions in both memory and arithmetic operations. Binary weights permit replacing multiply-accumulate (MAC) operations with XNOR-popcount operations, which are dramatically cheaper in energy and silicon area. However, the general consensus in recent literature is that such extreme quantization is fundamentally incompatible with the complex data distributions required for diffusion-based generation. The latest state-of-the-art research on this topic - Binarized Diffusion Model (BiDM) \[citation\], published at NeurIPS 2024 - concluded that 1-bit binarization causes the generative manifold to catastrophically collapse, necessitating elaborate knowledge distillation from a full-precision teacher to recover generative utility.
+Extreme quantization - specifically, 1-bit binarization, where 16-bit or 32-bit floating-point weights are compressed to a single bit - promises massive compression ratios and order-of-magnitude reductions in both memory and arithmetic operations. Binary weights permit replacing multiply-accumulate (MAC) operations with XNOR-popcount operations, which are dramatically cheaper in energy and silicon area. However, the general consensus in recent literature is that such extreme quantization is fundamentally incompatible with the complex data distributions required for diffusion-based generation. The latest state-of-the-art research on this topic - Binarized Diffusion Model (BiDM) \cite{bidm2024}, published at NeurIPS 2024 - concluded that 1-bit binarization causes the generative manifold to catastrophically collapse, necessitating elaborate knowledge distillation from a full-precision teacher to recover generative utility.
 
 We contest this narrative. We contend that the topological destruction observed in prior work is not an inherent property of the 1-bit hardware boundary, but rather a critical flaw in the prevailing **Post-Training Quantization (PTQ)** paradigm. The PTQ paradigm treats binarization as a *compression problem*: it takes a finely tuned FP16 diffusion model and truncates its weights to discrete binary states post-hoc. This "Train-then-Quantize" approach suddenly lobotomizes the finely optimized weight manifold, destroying the gradient signal pathways and producing the predictable result of structural collapse and abstract noise generation.
 
@@ -35,27 +35,27 @@ To rigorously validate this paradigm shift, we provide a strict hardware ablatio
 
 ### A. Diffusion Models and Edge Deployment
 
-DDPMs \[Ho et al., 2020\] define a forward Markov process that gradually corrupts data with Gaussian noise over T steps, and learn a reverse denoising network fθ to reconstruct clean images. The training objective is:
+DDPMs \cite{ho2020ddpm} define a forward Markov process that gradually corrupts data with Gaussian noise over T steps, and learn a reverse denoising network fθ to reconstruct clean images. The training objective is:
 
 $$\mathcal{L} = \mathbb{E}_{x_0, \varepsilon, t}\!\left[\left\|\varepsilon - f_\theta\!\left(\sqrt{\bar\alpha_t}\,x_0 + \sqrt{1-\bar\alpha_t}\,\varepsilon,\;t\right)\right\|^2\right]$$
 
-where $\bar\alpha_t = \prod_{i=1}^t (1 - \beta_i)$. Subsequent improvements (DDIM \[Song et al., 2020\], LDM \[Rombach et al., 2022\], SDXL \[Podell et al., 2023\]) have extended generation quality dramatically, but all share the inference bottleneck of hundreds to thousands of sequential network evaluations. Efforts to make diffusion models edge-deployable have focused primarily on sampling efficiency (fewer steps via distillation \[Salimans & Ho, 2022\]) or architectural pruning, but these do not address the fundamental precision cost of floating-point arithmetic.
+where $\bar\alpha_t = \prod_{i=1}^t (1 - \beta_i)$. Subsequent improvements (DDIM \cite{song2020ddim}, LDM \cite{rombach2022ldm}, SDXL \cite{podell2023sdxl}) have extended generation quality dramatically, but all share the inference bottleneck of hundreds to thousands of sequential network evaluations. Efforts to make diffusion models edge-deployable have focused primarily on sampling efficiency (fewer steps via distillation \cite{salimans2022progressive}) or architectural pruning, but these do not address the fundamental precision cost of floating-point arithmetic.
 
 ### B. Post-Training Quantization and Its Limits
 
-Post-Training Quantization (PTQ) compresses a pre-trained model by mapping its floating-point parameters to a lower-bit representation without retraining. Q-Diffusion \[Li et al., 2023\] and PTQD \[He et al., 2023\] demonstrated PTQ of diffusion models to 4-bit and 8-bit precision with acceptable quality degradation. EfficientDiffusion and TDQ introduced timestep-aware quantization calibration to handle the fact that activation distributions in diffusion models shift significantly across timesteps, making a single fixed quantization scale suboptimal.
+Post-Training Quantization (PTQ) compresses a pre-trained model by mapping its floating-point parameters to a lower-bit representation without retraining. Q-Diffusion \cite{li2023qdiffusion} and PTQD \cite{he2023ptqd} demonstrated PTQ of diffusion models to 4-bit and 8-bit precision with acceptable quality degradation. EfficientDiffusion and TDQ introduced timestep-aware quantization calibration to handle the fact that activation distributions in diffusion models shift significantly across timesteps, making a single fixed quantization scale suboptimal.
 
 However, PTQ degrades sharply as bit-width decreases. At 1-bit precision, the quantization error is so large relative to the weight magnitude that the pre-trained solution manifold cannot be preserved: the binary approximation of each floating-point weight is a fundamentally different object from the original, and the entire network's learned computation is disrupted. Our empirical results confirm this catastrophically at 1-bit (FID: 381.79, legibility: 0.00%) for a W1A16 PTQ model.
 
 ### C. The 1-Bit Binarization Bottleneck
 
-Binary Neural Networks (BNNs) \[Hubara et al., 2016; Rastegari et al., 2016\] constrain weights and activations to {−1, +1}, enabling XNOR-popcount computation. XNOR-Net introduced per-channel scaling factors (α = mean|W|) to reduce quantization error. The Straight-Through Estimator (STE) \[Bengio et al., 2013\] approximates gradients through the non-differentiable sign function, allowing BNNs to be trained end-to-end. While BNNs have been successfully applied to discriminative tasks (image classification \[Liu et al., 2020; Martinez et al., 2020\]), applying them to generative models - which must preserve the full geometry of the data distribution rather than project to a finite label space - has been largely unexplored.
+Binary Neural Networks (BNNs) \cite{hubara2016bnn,rastegari2016xnornet} constrain weights and activations to {−1, +1}, enabling XNOR-popcount computation. XNOR-Net introduced per-channel scaling factors (α = mean|W|) to reduce quantization error. The Straight-Through Estimator (STE) \cite{bengio2013ste} approximates gradients through the non-differentiable sign function, allowing BNNs to be trained end-to-end. While BNNs have been successfully applied to discriminative tasks (image classification \cite{liu2020reactnet,martinez2020training}), applying them to generative models - which must preserve the full geometry of the data distribution rather than project to a finite label space - has been largely unexplored.
 
-BiDM \[citation\] represents the first work to fully binarize a diffusion model (W1A1), achieving FID 22.74 on LSUN-Bedrooms 256×256 through a combination of Timestep-friendly Binary Structure (TBS), which uses learnable activation binarizers and cross-timestep connections to handle activation distribution shift, and Space Patched Distillation (SPD), which aligns binary features with a full-precision teacher through patch-level distillation. BiDM yields 28.0× storage reduction and 52.7× operations savings. Critically, BiDM requires a full-precision teacher trained and available for distillation - a dependency our work removes entirely.
+BiDM \cite{bidm2024} represents the first work to fully binarize a diffusion model (W1A1), achieving FID 22.74 on LSUN-Bedrooms 256×256 through a combination of Timestep-friendly Binary Structure (TBS), which uses learnable activation binarizers and cross-timestep connections to handle activation distribution shift, and Space Patched Distillation (SPD), which aligns binary features with a full-precision teacher through patch-level distillation. BiDM yields 28.0× storage reduction and 52.7× operations savings. Critically, BiDM requires a full-precision teacher trained and available for distillation - a dependency our work removes entirely.
 
 ### D. Pre-Activation Residual Networks
 
-He et al. \[2016\] showed that placing batch normalization and activation before the convolution (pre-activation ordering: BN → Act → Conv) improves gradient flow in deep residual networks by allowing gradients to pass through the skip connection without traversing a normalization layer. In the BNN context, pre-activation ordering has additional significance: BatchNorm normalizes the pre-activation distribution to near zero mean and unit variance, calibrating inputs to the sign function's decision boundary and improving STE effectiveness. We adopt this ordering throughout our binary architectures as a structural mechanism for sustaining topological stability during training.
+He et al. \cite{he2016preact} showed that placing batch normalization and activation before the convolution (pre-activation ordering: BN → Act → Conv) improves gradient flow in deep residual networks by allowing gradients to pass through the skip connection without traversing a normalization layer. In the BNN context, pre-activation ordering has additional significance: BatchNorm normalizes the pre-activation distribution to near zero mean and unit variance, calibrating inputs to the sign function's decision boundary and improving STE effectiveness. We adopt this ordering throughout our binary architectures as a structural mechanism for sustaining topological stability during training.
 
 ---
 
@@ -79,9 +79,9 @@ The key hypothesis of Native Binarization is that this natively grown binary sol
 
 ### A. Native 1-Bit Diffusion Architecture
 
-We implement a shallow residual U-Net \[Ronneberger et al., 2015\] with channel widths [64, 128, 256] and two spatial downsampling stages (MaxPool2d, ×2) and corresponding upsampling stages (nearest-neighbor interpolation, ×2). Skip connections are implemented via channel concatenation at each resolution level. The model processes 28×28 single-channel MNIST images.
+We implement a shallow residual U-Net \cite{ronneberger2015unet} with channel widths [64, 128, 256] and two spatial downsampling stages (MaxPool2d, ×2) and corresponding upsampling stages (nearest-neighbor interpolation, ×2). Skip connections are implemented via channel concatenation at each resolution level. The model processes 28×28 single-channel MNIST images.
 
-**Time Conditioning.** A sinusoidal positional embedding \[Vaswani et al., 2017\] of dimension 32 is passed through a two-layer MLP to produce a time embedding tₑₘᵦ ∈ ℝ³². Within each residual block, a learned linear projection adapts tₑₘᵦ to the block's channel dimension and is broadcast-added to the intermediate feature map, injecting timestep context at every resolution level. For the FP16 and W1A16 models the time MLP uses SiLU activation; for the W1A1 model, GELU is used, whose smoother gradient profile is more compatible with the clipped STE.
+**Time Conditioning.** A sinusoidal positional embedding \cite{vaswani2017attention} of dimension 32 is passed through a two-layer MLP to produce a time embedding tₑₘᵦ ∈ ℝ³². Within each residual block, a learned linear projection adapts tₑₘᵦ to the block's channel dimension and is broadcast-added to the intermediate feature map, injecting timestep context at every resolution level. For the FP16 and W1A16 models the time MLP uses SiLU activation; for the W1A1 model, GELU is used, whose smoother gradient profile is more compatible with the clipped STE.
 
 **Boundary Layer Convention.** The first convolutional layer (1→64 channels) and the final output layer (64→1 channels) are kept in full precision (Conv2d) for all variants, following the standard BNN convention of preserving interface fidelity at the pixel space boundary.
 
@@ -128,7 +128,7 @@ This is particularly significant in diffusion networks, where convolutional filt
 
 ### D. Gradient Approximation via Straight-Through Estimator (STE)
 
-The sign function in both weight and activation binarization is non-differentiable. We use the **Straight-Through Estimator** (STE) \[Bengio et al., 2013\] to pass gradients through the binarization step.
+The sign function in both weight and activation binarization is non-differentiable. We use the **Straight-Through Estimator** (STE) \cite{bengio2013ste} to pass gradients through the binarization step.
 
 **Weight STE (BitConv2d\_Std and BitConv2d\_BNN):**
 
@@ -142,7 +142,7 @@ $$\text{BinaryActivation}(x) = \operatorname{sign}(x)$$
 
 $$\frac{\partial\,\text{BinaryActivation}}{\partial x} = \mathbf{1}[|x| \leq 1]$$
 
-The clipped STE zeros gradients for inputs with |x| > 1, preventing instability from outlier activations while maintaining gradient flow in the central region \[Courbariaux et al., 2016\].
+The clipped STE zeros gradients for inputs with |x| > 1, preventing instability from outlier activations while maintaining gradient flow in the central region \cite{courbariaux2016clippedste}.
 
 ---
 
@@ -173,7 +173,7 @@ This ablation allows a clean causal claim: any observed difference in generation
 
 ### C. Evaluation Metrics
 
-**Fréchet Inception Distance (FID).** FID \[Heusel et al., 2017\] measures the distance between the multivariate Gaussian fitted to InceptionV3 features of N = 2,000 generated samples and the MNIST test set. Images are upsampled from 28×28 to 299×299 via bilinear interpolation and replicated to 3 channels prior to feature extraction. Lower FID indicates higher distributional similarity to real data.
+**Fréchet Inception Distance (FID).** FID \cite{heusel2017fid} measures the distance between the multivariate Gaussian fitted to InceptionV3 features of N = 2,000 generated samples and the MNIST test set. Images are upsampled from 28×28 to 299×299 via bilinear interpolation and replicated to 3 channels prior to feature extraction. Lower FID indicates higher distributional similarity to real data.
 
 $$\text{FID} = \|\mu_r - \mu_g\|^2 + \operatorname{Tr}\!\left(\Sigma_r + \Sigma_g - 2(\Sigma_r\Sigma_g)^{1/2}\right)$$
 
@@ -292,7 +292,7 @@ Furthermore, the FP16 training landscape and the binary training landscape are d
 
 ### B. Structural Dominance vs. BiDM's Distillation
 
-BiDM \[citation\] achieves FID 22.74 on LSUN-Bedrooms 256×256 at full W1A1 precision through Timestep-friendly Binary Structure (TBS) and Space Patched Distillation (SPD). The TBS addresses the timestep distribution shift problem by learning separate binarizers per timestep group; SPD provides a full-precision teacher signal throughout training. Our approach - without any teacher - achieves competitive results on MNIST through structural dominance and topological stability alone.
+BiDM \cite{bidm2024} achieves FID 22.74 on LSUN-Bedrooms 256×256 at full W1A1 precision through Timestep-friendly Binary Structure (TBS) and Space Patched Distillation (SPD). The TBS addresses the timestep distribution shift problem by learning separate binarizers per timestep group; SPD provides a full-precision teacher signal throughout training. Our approach - without any teacher - achieves competitive results on MNIST through structural dominance and topological stability alone.
 
 The key conceptual distinction is: BiDM's approach is *distillation-dependent* and teacher-bound. The binary model is constrained to approximate the full-precision teacher's outputs, which limits the space of binary solutions to those near the teacher's solution manifold. Native Binarization is *teacher-free* and allows the binary network to discover its own binary solution geometry. For settings where pre-trained full-precision models are unavailable, computationally prohibitive to train, or proprietary, Native Binarization offers a viable alternative path to 1-bit diffusion.
 
