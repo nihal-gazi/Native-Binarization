@@ -1,4 +1,4 @@
-# Structural Dominance and Topological Stability in 1-Bit Diffusion Models
+# One Bit is All You Need to Diffuse
 
 ---
 
