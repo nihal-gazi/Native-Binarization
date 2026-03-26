@@ -309,8 +309,8 @@ Figure~\ref{fig:arch} shows the overall architecture.
     \draw[arr] (\a) -- (\b);
 
   % ---- Bottleneck → first decoder block ----
-  % Route: bot.east → right → up alongside decoder column → u2.south
-  \draw[arr] (bot.east) -- ++(0.45,0) |- (u2.east);
+  % Route: right along bot's y-level (below all decoder nodes), then up into u2.south
+  \draw[arr] (bot.east) -| (u2.south);
 
   % ---- Decoder flow (bottom→top) ----
   \foreach \a/\b in {u2/de2, de2/u1, u1/de1, de1/out}
@@ -322,10 +322,9 @@ Figure~\ref{fig:arch} shows the overall architecture.
   \draw[skip] (e2.east)  -| ++(0.2, 0) |- (de2.west)
         node[pos=0.25, above, gray!80, font=\tiny]{cat};
 
-  % ---- Time embed arrows (straight up from te into bot and de2) ----
-  \draw[garr] (te.north) -- (bot.south);
-  \draw[garr] (te.east)  -- ++(0.35,0) |- (de2.east)
-        node[pos=0.0, right, font=\tiny, green!60!black]{};
+  % ---- Time embed arrow (injected at every block via learned projection) ----
+  \draw[garr] (te.north) -- (bot.south)
+        node[midway, right, font=\tiny, green!60!black]{every block};
 
 \end{tikzpicture}
 \caption{Residual U-Net architecture shared across all three model variants (FP16,

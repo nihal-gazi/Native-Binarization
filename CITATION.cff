@@ -20,7 +20,7 @@ authors:
     affiliation: "Department of Computer Science Engineering, Institute of Engineering and Management, Kolkata, India"
 year: 2026
 license: Apache-2.0
-repository-code: "https://github.com/[repo-url]"
+repository-code: "https://github.com/nihal-gazi/Native-Binarization"
 abstract: >
   We introduce Native Binarization, a framework that trains diffusion models
   entirely from scratch using 1-bit weights, mean-centered scaling, and
@@ -53,4 +53,4 @@ preferred-citation:
       given-names: Aihik
   year: 2026
   conference:
-    name: "[Venue]"
+    name: "7th International Conference on Current Advancement in Science & Technology"
