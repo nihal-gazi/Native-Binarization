@@ -18,7 +18,7 @@ authors:
   - family-names: Basu
     given-names: Aihik
     affiliation: "Department of Computer Science Engineering, Institute of Engineering and Management, Kolkata, India"
-year: 2025
+year: 2026
 license: Apache-2.0
 repository-code: "https://github.com/[repo-url]"
 abstract: >
@@ -51,6 +51,6 @@ preferred-citation:
       given-names: Saubhagya
     - family-names: Basu
       given-names: Aihik
-  year: 2025
+  year: 2026
   conference:
     name: "[Venue]"
