@@ -642,8 +642,8 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \subfloat{\includegraphics[width=0.48\columnwidth]{images/fp16_1.png}}\hfill
-  \subfloat{\includegraphics[width=0.48\columnwidth]{images/fp16_2.png}}
+  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/fp16_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/fp16_2.png}}
   \caption{ResUNet\_FP16 (full-precision baseline). Digits are sharp, diverse, and
   topologically committed to distinct classes. Reference quality ceiling for all
   compressed variants.}
@@ -652,8 +652,8 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \subfloat{\includegraphics[width=0.48\columnwidth]{images/w1a16_our_output_1.png}}\hfill
-  \subfloat{\includegraphics[width=0.48\columnwidth]{images/w1a16_our_output_2.png}}
+  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/w1a16_our_output_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/w1a16_our_output_2.png}}
   \caption{Natively trained ResUNet\_W1A16 (\textbf{structural dominance}: centered
   1-bit weights, FP16 activations). Digit structure and class diversity are visually
   preserved, consistent with FID 24.22 and 89.92\% legibility.}
@@ -662,7 +662,7 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.75\columnwidth]{images/w1a16_quantized_1.png}
+  \includegraphics[width=0.75\columnwidth]{../assets/w1a16_quantized_1.png}
   \caption{PTQ ResUNet\_W1A16 (FP16 model post-hoc binarized). Outputs are
   structurally incoherent noise with no recognizable digit topology, consistent with
   FID 381.79 and 0.00\% legibility. Archetypal manifestation of manifold collapse at
@@ -672,8 +672,8 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \subfloat{\includegraphics[width=0.48\columnwidth]{images/w1a1_our_output_1.png}}\hfill
-  \subfloat{\includegraphics[width=0.48\columnwidth]{images/w1a1_our_output_2.png}}
+  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/w1a1_our_output_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/w1a1_our_output_2.png}}
   \caption{Natively trained ResUNet\_W1A1 (full 1-bit: binary weights and binary
   activations, pre-activation ordering with clipped STE). Despite all-binary computation,
   digit topology is broadly preserved, confirming \textbf{topological stability} extends
@@ -683,7 +683,7 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.75\columnwidth]{images/w1a1_quantized_1.png}
+  \includegraphics[width=0.75\columnwidth]{../assets/w1a1_quantized_1.png}
   \caption{PTQ ResUNet\_W1A1 (FP16 model fully binarized: both weights and activations).
   Binarizing activations compounds the weight quantization error, resulting in further
   structural degradation relative to PTQ W1A16 (Fig.~\ref{fig:w1a16ptq}).}
@@ -692,9 +692,9 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \subfloat[FP16]{\includegraphics[width=0.31\columnwidth]{images/fp16_1.png}}\hfill
-  \subfloat[W1A16 Native]{\includegraphics[width=0.31\columnwidth]{images/w1a16_our_output_1.png}}\hfill
-  \subfloat[W1A1 Native]{\includegraphics[width=0.31\columnwidth]{images/w1a1_our_output_1.png}}
+  \subfloat[FP16]{\includegraphics[width=0.31\columnwidth]{../assets/fp16_1.png}}\hfill
+  \subfloat[W1A16 Native]{\includegraphics[width=0.31\columnwidth]{../assets/w1a16_our_output_1.png}}\hfill
+  \subfloat[W1A1 Native]{\includegraphics[width=0.31\columnwidth]{../assets/w1a1_our_output_1.png}}
   \caption{Three-way comparison. The progressive quality gradient is consistent with the
   information-theoretic cost of successive quantization: W1A16 native maintains
   near-baseline fidelity; W1A1 native introduces characteristic smoothing consistent
