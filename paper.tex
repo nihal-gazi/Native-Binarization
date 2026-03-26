@@ -23,7 +23,7 @@
 \usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc}
 
 % ---- Figure sub-panels ----
-\usepackage{subcaption}
+\usepackage{subfig}
 
 % ---- Hyperlinks (load last) ----
 \usepackage[hidelinks]{hyperref}
@@ -629,12 +629,8 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \begin{subfigure}[b]{0.48\columnwidth}
-    \includegraphics[width=\linewidth]{images/fp16_1.png}
-  \end{subfigure}\hfill
-  \begin{subfigure}[b]{0.48\columnwidth}
-    \includegraphics[width=\linewidth]{images/fp16_2.png}
-  \end{subfigure}
+  \subfloat{\includegraphics[width=0.48\columnwidth]{images/fp16_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.48\columnwidth]{images/fp16_2.png}}
   \caption{ResUNet\_FP16 (full-precision baseline). Digits are sharp, diverse, and
   topologically committed to distinct classes. Reference quality ceiling for all
   compressed variants.}
@@ -643,12 +639,8 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \begin{subfigure}[b]{0.48\columnwidth}
-    \includegraphics[width=\linewidth]{images/w1a16_our_output_1.png}
-  \end{subfigure}\hfill
-  \begin{subfigure}[b]{0.48\columnwidth}
-    \includegraphics[width=\linewidth]{images/w1a16_our_output_2.png}
-  \end{subfigure}
+  \subfloat{\includegraphics[width=0.48\columnwidth]{images/w1a16_our_output_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.48\columnwidth]{images/w1a16_our_output_2.png}}
   \caption{Natively trained ResUNet\_W1A16 (\textbf{structural dominance}: centered
   1-bit weights, FP16 activations). Digit structure and class diversity are visually
   preserved, consistent with FID 24.22 and 89.92\% legibility.}
@@ -667,12 +659,8 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \begin{subfigure}[b]{0.48\columnwidth}
-    \includegraphics[width=\linewidth]{images/w1a1_our_output_1.png}
-  \end{subfigure}\hfill
-  \begin{subfigure}[b]{0.48\columnwidth}
-    \includegraphics[width=\linewidth]{images/w1a1_our_output_2.png}
-  \end{subfigure}
+  \subfloat{\includegraphics[width=0.48\columnwidth]{images/w1a1_our_output_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.48\columnwidth]{images/w1a1_our_output_2.png}}
   \caption{Natively trained ResUNet\_W1A1 (full 1-bit: binary weights and binary
   activations, pre-activation ordering with clipped STE). Despite all-binary computation,
   digit topology is broadly preserved, confirming \textbf{topological stability} extends
@@ -691,18 +679,9 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \begin{subfigure}[b]{0.31\columnwidth}
-    \includegraphics[width=\linewidth]{images/fp16_1.png}
-    \caption{FP16}
-  \end{subfigure}\hfill
-  \begin{subfigure}[b]{0.31\columnwidth}
-    \includegraphics[width=\linewidth]{images/w1a16_our_output_1.png}
-    \caption{W1A16 Native}
-  \end{subfigure}\hfill
-  \begin{subfigure}[b]{0.31\columnwidth}
-    \includegraphics[width=\linewidth]{images/w1a1_our_output_1.png}
-    \caption{W1A1 Native}
-  \end{subfigure}
+  \subfloat[FP16]{\includegraphics[width=0.31\columnwidth]{images/fp16_1.png}}\hfill
+  \subfloat[W1A16 Native]{\includegraphics[width=0.31\columnwidth]{images/w1a16_our_output_1.png}}\hfill
+  \subfloat[W1A1 Native]{\includegraphics[width=0.31\columnwidth]{images/w1a1_our_output_1.png}}
   \caption{Three-way comparison. The progressive quality gradient is consistent with the
   information-theoretic cost of successive quantization: W1A16 native maintains
   near-baseline fidelity; W1A1 native introduces characteristic smoothing consistent
