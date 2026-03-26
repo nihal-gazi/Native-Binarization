@@ -1,0 +1,56 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it using the metadata below."
+type: software
+title: "One Bit is All You Need to Diffuse: Native Binarization for 1-Bit Diffusion Models"
+authors:
+  - family-names: Gazi
+    given-names: Nihal
+    affiliation: "Department of Computer Science Engineering and AI & ML, Institute of Engineering and Management, Kolkata, India"
+  - family-names: Bhattacharya
+    given-names: Ayushman
+    affiliation: "Department of Computer Science Engineering and AI & ML, JIS University, Kolkata, India"
+  - family-names: Biswas
+    given-names: Aditya K.
+    affiliation: "Department of Computer Science & Business Systems, Institute of Engineering and Management, Kolkata, India"
+  - family-names: Kunti
+    given-names: Saubhagya
+    affiliation: "Department of Computer Science & Business Systems, Institute of Engineering and Management, Kolkata, India"
+  - family-names: Basu
+    given-names: Aihik
+    affiliation: "Department of Computer Science Engineering, Institute of Engineering and Management, Kolkata, India"
+year: 2025
+license: Apache-2.0
+repository-code: "https://github.com/[repo-url]"
+abstract: >
+  We introduce Native Binarization, a framework that trains diffusion models
+  entirely from scratch using 1-bit weights, mean-centered scaling, and
+  pre-activation structures. Through a strict W1A16 hardware ablation we
+  demonstrate that manifold collapse at the 1-bit boundary is a property of
+  the Post-Training Quantization paradigm, not of 1-bit precision itself.
+  Our natively trained binary diffusion model achieves FID 24.22 and 89.92%
+  legibility — matching the full-precision FP16 baseline — at a 32× memory
+  reduction and 58× computational speedup, with no knowledge distillation.
+keywords:
+  - binary neural networks
+  - diffusion models
+  - model compression
+  - generative AI
+  - edge AI
+  - 1-bit quantization
+preferred-citation:
+  type: conference-paper
+  title: "One Bit is All You Need to Diffuse"
+  authors:
+    - family-names: Gazi
+      given-names: Nihal
+    - family-names: Bhattacharya
+      given-names: Ayushman
+    - family-names: Biswas
+      given-names: Aditya K.
+    - family-names: Kunti
+      given-names: Saubhagya
+    - family-names: Basu
+      given-names: Aihik
+  year: 2025
+  conference:
+    name: "[Venue]"
