@@ -1,6 +1,6 @@
 % ============================================================
 %  One Bit is All You Need to Diffuse
-%  IEEE Conference Paper — IEEEtran class
+%  Single-Column Paper — IEEEtran class
 % ============================================================
 \documentclass[onecolumn, journal]{IEEEtran}
 
@@ -493,7 +493,6 @@ Table~\ref{tab:variants}.
 \caption{Model Variants}
 \label{tab:variants}
 \footnotesize
-\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}llll@{}}
 \toprule
 \textbf{Variant} & \textbf{Weights} & \textbf{Acts.} & \textbf{Key Layer} \\
@@ -502,7 +501,7 @@ ResUNet\_FP16  & FP16              & FP16 (SiLU)        & Conv2d \\
 ResUNet\_W1A16 & 1-bit, centered   & FP16 (SiLU)        & BitConv2d\_Std \\
 ResUNet\_W1A1  & 1-bit, uncentered & 1-bit (clip.\ STE) & BitConv2d\_BNN \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \end{table}
 
 All models are initialized with PyTorch default initialization. All experiments use the
