@@ -24,6 +24,11 @@
 % ---- Figure sub-panels ----
 \usepackage{subfig}
 
+% ---- Section heading style (bold, left-aligned) ----
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries\raggedright}{\thesection.\quad}{0pt}{}
+\titleformat{\subsection}{\normalsize\bfseries\raggedright}{\thesubsection\quad}{0pt}{}
+
 % ---- Hyperlinks (load last) ----
 \usepackage[hidelinks]{hyperref}
 
@@ -51,6 +56,7 @@
 \maketitle
 
 % ============================================================
+\renewcommand{\abstractname}{\large\bfseries\raggedright Abstract}
 \begin{abstract}
 Deploying generative diffusion models on resource-constrained edge devices is severely
 bottlenecked by the memory and computational costs of floating-point arithmetic. While
