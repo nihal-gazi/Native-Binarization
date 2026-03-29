@@ -2,8 +2,7 @@
 %  One Bit is All You Need to Diffuse
 %  IEEE Conference Paper — IEEEtran class
 % ============================================================
-\documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
+\documentclass[onecolumn, journal]{IEEEtran}
 
 % ---- Core packages ----
 \usepackage{cite}
@@ -36,17 +35,11 @@
 \author{
   \IEEEauthorblockN{Nihal Gazi\textsuperscript{1},\;
                     Ayushman Bhattacharya\textsuperscript{2},\;
-                    Aditya K.\ Biswas\textsuperscript{3},\;
-                    Saubhagya Kunti\textsuperscript{3},\;
-                    Aihik Basu\textsuperscript{4}}
-  \IEEEauthorblockA{\textsuperscript{1}Department of Computer Science Engineering and AI \& ML,
-    Institute of Engineering and Management, Kolkata, India}
-  \IEEEauthorblockA{\textsuperscript{2}Department of Computer Science Engineering and AI \& ML,
-    JIS University, Kolkata, India}
-  \IEEEauthorblockA{\textsuperscript{3}Department of Computer Science \& Business Systems,
-    Institute of Engineering and Management, Kolkata, India}
-  \IEEEauthorblockA{\textsuperscript{4}Department of Computer Science Engineering,
-    Institute of Engineering and Management, Kolkata, India}
+                    Aditya K.\ Biswas\textsuperscript{1},\;
+                    Saubhagya Kunti\textsuperscript{1},\;
+                    Aihik Basu\textsuperscript{1}}
+  \IEEEauthorblockA{\textsuperscript{1}Institute of Engineering and Management, Kolkata, India}
+  \IEEEauthorblockA{\textsuperscript{2}JIS University, Kolkata, India}
 }
 
 \maketitle
@@ -132,9 +125,9 @@ weight binarization methodology alone. Our results definitively prove that stand
 adaptation completely destroys generative topology at the 1-bit boundary
 (FID:~381.79, legibility:~0.00\%), while Native Binarization achieves functional and
 topological parity with the FP16 baseline (FID:~24.22, legibility:~89.92\%). This
-approach successfully removes 95\% of the model's informational bandwidth, creating a
-diffusion architecture that is 32$\times$ smaller, 58$\times$ faster in binary
-operations, and eliminates the problem of manifold collapse.
+approach successfully removes over 96\% of the model's parametric precision, creating a
+diffusion architecture that is 32$\times$ smaller in weight storage, 58$\times$ faster in
+binary operations, and eliminates the problem of manifold collapse.
 
 \textbf{Contributions.} This paper makes the following contributions:
 \begin{itemize}
@@ -507,7 +500,7 @@ standard DDPM training objective with a linear noise schedule $\beta \in
 [10^{-4},\,0.02]$ over $T=1{,}000$ timesteps. Training uses
 AdamW~\cite{loshchilov2019adamw} (lr $=10^{-4}$) for 100 epochs on the MNIST training
 set (60{,}000 images, $28{\times}28$ grayscale, normalized to $[-1,1]$). Batch size is
-16 for W1A1 and 128 for FP16 and W1A16. The time MLP uses SiLU activation for FP16 and
+16 for all variants. The time MLP uses ReLU activation for FP16 and
 W1A16, and GELU for W1A1.
 
 \subsection{The W1A16 Isolation Strategy}
@@ -595,7 +588,7 @@ the full-precision FP16 baseline. Figure~\ref{fig:chart} visualises the gap.
 \begin{axis}[
     ybar,
     bar width=9pt,
-    width=\columnwidth,
+    width=0.65\columnwidth,
     height=4.8cm,
     enlarge x limits=0.35,
     symbolic x coords={W1A16 Native, W1A16 PTQ},
@@ -641,8 +634,8 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/fp16_1.png}}\hfill
-  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/fp16_2.png}}
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/fp16_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/fp16_2.png}}
   \caption{ResUNet\_FP16 (full-precision baseline). Digits are sharp, diverse, and
   topologically committed to distinct classes. Reference quality ceiling for all
   compressed variants.}
@@ -651,8 +644,8 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/w1a16_our_output_1.png}}\hfill
-  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/w1a16_our_output_2.png}}
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a16_our_output_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a16_our_output_2.png}}
   \caption{Natively trained ResUNet\_W1A16 (\textbf{structural dominance}: centered
   1-bit weights, FP16 activations). Digit structure and class diversity are visually
   preserved, consistent with FID 24.22 and 89.92\% legibility.}
@@ -661,7 +654,7 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.75\columnwidth]{../assets/w1a16_quantized_1.png}
+  \includegraphics[width=0.45\columnwidth]{../assets/w1a16_quantized_1.png}
   \caption{PTQ ResUNet\_W1A16 (FP16 model post-hoc binarized). Outputs are
   structurally incoherent noise with no recognizable digit topology, consistent with
   FID 381.79 and 0.00\% legibility. Archetypal manifestation of manifold collapse at
@@ -671,8 +664,8 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/w1a1_our_output_1.png}}\hfill
-  \subfloat{\includegraphics[width=0.48\columnwidth]{../assets/w1a1_our_output_2.png}}
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a1_our_output_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a1_our_output_2.png}}
   \caption{Natively trained ResUNet\_W1A1 (full 1-bit: binary weights and binary
   activations, pre-activation ordering with clipped STE). Despite all-binary computation,
   digit topology is broadly preserved, confirming \textbf{topological stability} extends
@@ -682,7 +675,7 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.75\columnwidth]{../assets/w1a1_quantized_1.png}
+  \includegraphics[width=0.45\columnwidth]{../assets/w1a1_quantized_1.png}
   \caption{PTQ ResUNet\_W1A1 (FP16 model fully binarized: both weights and activations).
   Binarizing activations compounds the weight quantization error, resulting in further
   structural degradation relative to PTQ W1A16 (Fig.~\ref{fig:w1a16ptq}).}
@@ -691,9 +684,9 @@ quantitative claims.
 
 \begin{figure}[t]
   \centering
-  \subfloat[FP16]{\includegraphics[width=0.31\columnwidth]{../assets/fp16_1.png}}\hfill
-  \subfloat[W1A16 Native]{\includegraphics[width=0.31\columnwidth]{../assets/w1a16_our_output_1.png}}\hfill
-  \subfloat[W1A1 Native]{\includegraphics[width=0.31\columnwidth]{../assets/w1a1_our_output_1.png}}
+  \subfloat[FP16]{\includegraphics[width=0.22\columnwidth]{../assets/fp16_1.png}}\hfill
+  \subfloat[W1A16 Native]{\includegraphics[width=0.22\columnwidth]{../assets/w1a16_our_output_1.png}}\hfill
+  \subfloat[W1A1 Native]{\includegraphics[width=0.22\columnwidth]{../assets/w1a1_our_output_1.png}}
   \caption{Three-way comparison. The progressive quality gradient is consistent with the
   information-theoretic cost of successive quantization: W1A16 native maintains
   near-baseline fidelity; W1A1 native introduces characteristic smoothing consistent
@@ -708,8 +701,8 @@ ResUNet\_FP16:
 
 \begin{itemize}
   \item \textbf{Memory:} Binarized convolutional weights occupy 1~bit per parameter
-    vs.\ 16~bits in FP16---a \textbf{32$\times$ memory reduction} for the binarized
-    layers.
+    vs.\ 32~bits in standard FP32 storage---a \textbf{32$\times$ memory reduction} for
+    the binarized layers (16$\times$ if compared against FP16 inference weights).
   \item \textbf{Arithmetic:} Binary weight multiplication collapses to a sign operation,
     equivalent to an XNOR-popcount operation---a \textbf{58$\times$ reduction in binary
     operations} relative to FP16 MAC count (BOPs vs.\ FLOPs).
