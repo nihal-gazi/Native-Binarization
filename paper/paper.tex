@@ -63,9 +63,12 @@ fixed full-precision activations), we prove that while standard PTQ adaptation
 catastrophically destroys the generative topology (FID:~381.79, legibility:~0.00\%), our
 natively grown binary model maintains strict topological stability and achieves functional
 parity with the unquantized FP16 baseline (FID:~24.22, legibility:~89.92\%). These
-findings establish that 1-bit diffusion manifolds are structurally sound when initialized
-natively, unlocking a 32$\times$ memory reduction and 58$\times$ computational speedup
-without sacrificing semantic utility.
+findings establish that 1-bit diffusion manifolds are structurally sound when grown
+natively---without any teacher model or knowledge distillation---unlocking a
+32$\times$ memory reduction and 58$\times$ computational speedup without sacrificing
+semantic utility. To our knowledge, this is the first demonstration that binary
+diffusion models can be trained from scratch to functional parity with their
+full-precision counterparts.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -131,19 +134,26 @@ binary operations, and eliminates the problem of manifold collapse.
 
 \textbf{Contributions.} This paper makes the following contributions:
 \begin{itemize}
-  \item We formalize the concepts of \textbf{structural dominance} and
-    \textbf{topological stability} in binary diffusion models, providing a theoretical
-    basis for why centered weight binarization and pre-activation ordering succeed where
-    PTQ fails.
-  \item We introduce \textbf{Native Binarization}, a training-from-scratch framework for
-    1-bit diffusion models that requires no teacher model and no knowledge distillation.
-  \item We conduct a strict \textbf{W1A16 hardware ablation} that definitively isolates
-    the effect of binarization methodology from activation quantization noise, producing
-    the first clean comparison between PTQ and native training at the 1-bit weight
-    boundary.
-  \item We report a comprehensive evaluation across FP16, W1A16, and W1A1 regimes using
-    two complementary metrics---FID and a Legibility Score---demonstrating that
-    topological stability is measurable and preserved under native binary training.
+  \item We present the first evidence that 1-bit diffusion models can be trained
+    entirely from scratch---without any full-precision teacher, knowledge distillation,
+    or pre-trained checkpoint---achieving functional parity with the FP16 baseline.
+    This directly challenges the prevailing assumption, reinforced by
+    BiDM~\cite{bidm2024}, that teacher-guided distillation is a necessary condition for
+    binary diffusion.
+  \item We formalize two principles---\textbf{structural dominance} (preservation of
+    dominant directional weight geometry through centered binarization) and
+    \textbf{topological stability} (sustained manifold integrity via pre-activation
+    ordering)---providing a theoretical explanation for why native binary training
+    succeeds where PTQ catastrophically fails.
+  \item We design a strict \textbf{W1A16 hardware ablation} that isolates the effect of
+    weight binarization methodology from activation quantization noise, producing the
+    first controlled comparison between PTQ and native training at the 1-bit weight
+    boundary. This experimental design enables clean causal attribution of manifold
+    collapse to the PTQ paradigm rather than to the 1-bit precision itself.
+  \item We introduce the \textbf{Legibility Score}, a per-sample topological commitment
+    metric complementary to FID, and demonstrate its utility in distinguishing
+    distributional quality from per-sample structural validity across FP16, W1A16, and
+    W1A1 regimes.
 \end{itemize}
 
 % ============================================================
@@ -740,10 +750,18 @@ objective under binary constraints.
 BiDM~\cite{bidm2024} achieves FID 22.74 on LSUN-Bedrooms $256{\times}256$ at full W1A1
 precision through Timestep-friendly Binary Structure (TBS) and Space Patched Distillation
 (SPD). BiDM's approach is \emph{distillation-dependent} and teacher-bound: the binary
-model is constrained to approximate the full-precision teacher's outputs. Native
-Binarization is \emph{teacher-free} and allows the binary network to discover its own
-binary solution geometry---viable when pre-trained models are unavailable, prohibitively
-large to train, or proprietary.
+model is constrained to approximate the full-precision teacher's outputs. This creates a
+hard dependency chain---the binary model cannot exist without first training the
+full-precision model it distills from. Native Binarization is \emph{teacher-free} and
+allows the binary network to discover its own binary solution geometry.
+
+This distinction has significant practical implications. In domains where pre-trained
+diffusion models are unavailable (custom medical imaging, proprietary datasets, novel
+modalities), prohibitively expensive to train at full precision, or encumbered by
+licensing restrictions, distillation-based approaches are inapplicable. Native
+Binarization removes this dependency entirely: the binary model is the only model that
+needs to be trained, reducing total training cost and eliminating the teacher storage
+overhead.
 
 The structural dominance principle---centered weight binarization as a mechanism for
 preserving directional filter structure---is architecturally complementary to BiDM's TBS
