@@ -1,7 +1,3 @@
-"""
-Combined benchmark: FID + Legibility for all 5 model variants.
-Shares InceptionV3 and real-data stats across all evaluations for efficiency.
-"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,8 +7,6 @@ from scipy import linalg
 from torchvision.models import inception_v3
 from torchvision import datasets, transforms
 import os, sys
-
-# Add project root to path
 sys.path.insert(0, os.path.dirname(__file__))
 from models.architectures import ResUNet_FP16, ResUNet_W1A16, ResUNet_W1A1, MNISTClassifier
 
@@ -31,8 +25,6 @@ MODELS = {
 }
 
 JUDGE_PATH = r".\models\judge_mnist.pth"
-
-# --- Diffusion schedule (shared) ---
 betas = torch.linspace(1e-4, 0.02, 1000)
 alphas = 1. - betas
 alphas_cumprod = torch.cumprod(alphas, dim=0)
