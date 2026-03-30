@@ -74,10 +74,10 @@ preservation of dominant directional weight geometry through centered binarizati
 \emph{topological stability}---the capacity of the binary network to sustain manifold
 integrity throughout training. Through a strict W1A16 hardware ablation (binary weights,
 fixed full-precision activations), we show that standard PTQ adaptation
-severely degrades generative quality (FID:~193.50, legibility:~64.29\%), while our
+severely degrades generative quality (FID:~191.94, legibility:~64.92\%), while our
 natively grown binary model maintains strict topological stability and achieves functional
 parity with---and even slightly surpasses---the FP16 baseline
-(FID:~23.33 vs.~29.82, legibility:~89.77\% vs.~90.42\%). These
+(FID:~24.24 vs.~29.60, legibility:~89.45\% vs.~90.79\%). These
 findings establish that 1-bit diffusion manifolds are structurally sound when grown
 natively---without any teacher model or knowledge distillation---unlocking a
 32$\times$ memory reduction and 58$\times$ computational speedup without sacrificing
@@ -121,7 +121,7 @@ paradigm treats binarization as a \emph{compression problem}: it takes a finely 
 FP16 diffusion model and truncates its weights to discrete binary states post-hoc. This
 ``Train-then-Quantize'' approach suddenly lobotomizes the finely optimized weight
 manifold, destroying the gradient signal pathways and producing the predictable result of
-structural collapse and abstract noise generation.
+severe structural degradation and a marked loss of generative quality.
 
 In this paper, we propose a paradigm shift from PTQ to \textbf{Native Binarization}---
 reframing binarization as a \emph{representation problem} rather than a compression
@@ -139,9 +139,9 @@ To rigorously validate this paradigm shift, we provide a strict hardware ablatio
 with activation precision fixed at FP16 (the W1A16 regime), isolating the effects of the
 weight binarization methodology alone. Our results show that standard PTQ
 adaptation severely degrades generative quality at the 1-bit boundary
-(FID:~193.50, legibility:~64.29\%), while Native Binarization achieves functional and
-topological parity with the FP16 baseline (FID:~23.33 vs.~29.82 baseline,
-legibility:~89.77\% vs.~90.42\% baseline). This
+(FID:~191.94, legibility:~64.92\%), while Native Binarization achieves functional and
+topological parity with the FP16 baseline (FID:~24.24 vs.~29.60 baseline,
+legibility:~89.45\% vs.~90.79\% baseline). This
 approach successfully removes over 96\% of the model's parametric precision, creating a
 diffusion architecture that is 32$\times$ smaller in weight storage, 58$\times$ faster in
 binary operations, and eliminates the problem of manifold collapse.
@@ -158,7 +158,7 @@ binary operations, and eliminates the problem of manifold collapse.
     dominant directional weight geometry through centered binarization) and
     \textbf{topological stability} (sustained manifold integrity via pre-activation
     ordering)---providing a theoretical explanation for why native binary training
-    succeeds where PTQ catastrophically fails.
+    succeeds where PTQ severely degrades.
   \item We design a strict \textbf{W1A16 hardware ablation} that isolates the effect of
     weight binarization methodology from activation quantization noise, producing the
     first controlled comparison between PTQ and native training at the 1-bit weight
@@ -205,8 +205,8 @@ timesteps, making a single fixed quantization scale suboptimal.
 However, PTQ degrades sharply as bit-width decreases. At 1-bit precision, the
 quantization error is so large relative to the weight magnitude that the pre-trained
 solution manifold cannot be preserved. Our empirical results confirm severe degradation
-at 1-bit (FID:~193.50, legibility:~64.29\%) for a W1A16 PTQ model, compared to
-FID~23.33 and 89.77\% legibility for the natively trained equivalent.
+at 1-bit (FID:~191.94, legibility:~64.92\%) for a W1A16 PTQ model, compared to
+FID~24.24 and 89.45\% legibility for the natively trained equivalent.
 
 \subsection{The 1-Bit Binarization Bottleneck}
 
@@ -522,10 +522,12 @@ ResUNet\_W1A1  & 1-bit, uncentered & 1-bit (clip.\ STE) & BitConv2d\_BNN \\
 All models are initialized with PyTorch default initialization. All experiments use the
 standard DDPM training objective with a linear noise schedule $\beta \in
 [10^{-4},\,0.02]$ over $T=1{,}000$ timesteps. Training uses
-AdamW~\cite{loshchilov2019adamw} (lr $=10^{-4}$) for 100 epochs on the MNIST training
-set (60{,}000 images, $28{\times}28$ grayscale, normalized to $[-1,1]$). Batch size is
-16 for all variants. The time MLP uses ReLU activation for FP16 and
-W1A16, and GELU for W1A1.
+Adam (lr $=10^{-3}$) for FP16 and W1A16, and
+AdamW~\cite{loshchilov2019adamw} (lr $=10^{-4}$) for W1A1, each for 100 epochs on the
+MNIST training set (60{,}000 images, $28{\times}28$ grayscale, normalized to $[-1,1]$).
+Batch size is 16 for all variants. The time MLP uses ReLU activation for FP16 and
+W1A16, and GELU for W1A1. All reported metrics are averaged over three independent
+evaluation runs to ensure reproducibility.
 
 \subsection{The W1A16 Isolation Strategy}
 
@@ -588,25 +590,25 @@ ablation.
 \textbf{Model} & \textbf{Strategy} & \textbf{FID~$\downarrow$} &
 \textbf{Legibility~$\uparrow$} \\
 \midrule
-ResUNet\_FP16  & Native (baseline) & 29.82  & 90.42\% \\
-ResUNet\_W1A16 & \textbf{Native (ours)} & \textbf{23.33}  & \textbf{89.77\%} \\
-ResUNet\_W1A16 & PTQ               & 193.50 & 64.29\% \\
+ResUNet\_FP16  & Native (baseline) & $29.60 \pm 0.23$  & $90.79 \pm 0.51$\% \\
+ResUNet\_W1A16 & \textbf{Native (ours)} & $\mathbf{24.24 \pm 1.15}$  & $\mathbf{89.45 \pm 0.73}$\% \\
+ResUNet\_W1A16 & PTQ               & $191.94 \pm 1.37$ & $64.92 \pm 1.16$\% \\
 \midrule
-ResUNet\_W1A1  & \textbf{Native (ours)} & \textbf{83.90}  & \textbf{81.58\%} \\
-ResUNet\_W1A1  & PTQ               & 225.01 & 63.82\% \\
+ResUNet\_W1A1  & \textbf{Native (ours)} & $\mathbf{83.98 \pm 1.66}$  & $\mathbf{81.02 \pm 0.54}$\% \\
+ResUNet\_W1A1  & PTQ               & $223.00 \pm 1.89$ & $63.04 \pm 0.74$\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The results are decisive. The natively trained W1A16 model achieves FID~23.33 and
-legibility~89.77\%---not only matching but slightly \emph{surpassing} the FP16 baseline
-(FID~29.82, legibility~90.42\%). This demonstrates that the binary weight manifold
+The results are decisive. The natively trained W1A16 model achieves FID~24.24 and
+legibility~89.45\%---not only matching but slightly \emph{surpassing} the FP16 baseline
+(FID~29.60, legibility~90.79\%). This demonstrates that the binary weight manifold
 discovered through native training is at least as expressive as the full-precision
 solution for MNIST generation. The PTQ baseline, by contrast, degrades severely:
-FID~193.50 ($8.3\times$ worse than native) and legibility drops to 64.29\%, confirming
+FID~191.94 ($7.9\times$ worse than native) and legibility drops to 64.92\%, confirming
 that post-hoc binarization disrupts the learned score field even though some residual
-structure survives. At the fully binary W1A1 level, native training achieves FID~83.90
-and 81.58\% legibility, while PTQ deteriorates further to FID~225.01 and 63.82\%
+structure survives. At the fully binary W1A1 level, native training achieves FID~83.98
+and 81.02\% legibility, while PTQ deteriorates further to FID~223.00 and 63.04\%
 legibility. Figure~\ref{fig:chart} visualises the W1A16 gap.
 
 \begin{figure}[h]
@@ -636,18 +638,19 @@ legibility. Figure~\ref{fig:chart} visualises the W1A16 gap.
 ]
 % FID bars
 \addplot[fill=blue!45, draw=blue!60]
-  coordinates {(W1A16 Native, 23.33) (W1A16 PTQ, 193.50)};
+  coordinates {(W1A16 Native, 24.24) (W1A16 PTQ, 191.94)};
 \addlegendentry{FID $\downarrow$};
 
 % Legibility bars
 \addplot[fill=orange!55, draw=orange!70]
-  coordinates {(W1A16 Native, 89.77) (W1A16 PTQ, 64.29)};
+  coordinates {(W1A16 Native, 89.45) (W1A16 PTQ, 64.92)};
 \addlegendentry{Legibility \% $\uparrow$};
 \end{axis}
 \end{tikzpicture}
 \caption{FID (lower is better, blue) and Legibility \% (higher is better, orange) for
-the two W1A16 variants. Native Binarization achieves dramatically lower FID (23.33
-vs.\ 193.50) and higher legibility (89.77\% vs.\ 64.29\%) than PTQ.}
+the two W1A16 variants. Native Binarization achieves dramatically lower FID (24.24
+vs.\ 191.94) and higher legibility (89.45\% vs.\ 64.92\%) than PTQ. Results averaged
+over three independent runs.}
 \label{fig:chart}
 \end{figure}
 
@@ -672,7 +675,7 @@ quantitative claims.
   \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a16_our_output_2.png}}
   \caption{Natively trained ResUNet\_W1A16 (\textbf{structural dominance}: centered
   1-bit weights, FP16 activations). Digit structure and class diversity are visually
-  preserved, consistent with FID 23.33 and 89.77\% legibility.}
+  preserved, consistent with FID 24.24 and 89.45\% legibility.}
   \label{fig:w1a16nat}
 \end{figure}
 
@@ -681,7 +684,7 @@ quantitative claims.
   \includegraphics[width=0.45\columnwidth]{../assets/w1a16_quantized_1.png}
   \caption{PTQ ResUNet\_W1A16 (FP16 model post-hoc binarized). Outputs show
   significant structural degradation and reduced clarity, consistent with
-  FID~193.50 and 64.29\% legibility---substantially worse than native training
+  FID~191.94 and 64.92\% legibility---substantially worse than native training
   despite retaining some residual digit structure.}
   \label{fig:w1a16ptq}
 \end{figure}
@@ -735,7 +738,7 @@ ResUNet\_FP16:
 \end{itemize}
 
 These efficiency gains are realized at \textbf{zero cost to semantic utility}: the
-89.77\% legibility (vs.\ 90.42\% for FP16) confirms that the compressed model generates
+89.45\% legibility (vs.\ 90.79\% for FP16) confirms that the compressed model generates
 images that are semantically equivalent---at the digit-class level---to the
 full-precision baseline.
 
@@ -810,12 +813,12 @@ We have presented \textbf{Native Binarization}, a training framework for 1-bit d
 models grounded in two formally defined principles: \textbf{structural dominance} via
 mean-centered weight binarization, and \textbf{topological stability} via pre-activation
 residual ordering. Through a rigorous W1A16 hardware ablation, we demonstrated that the
-severe quality degradation (FID:~193.50, legibility:~64.29\%) observed under standard
+severe quality degradation (FID:~191.94, legibility:~64.92\%) observed under standard
 PTQ is not an inherent property of the 1-bit hardware boundary, but a consequence of the
 Train-then-Quantize paradigm.
 
-Our natively trained W1A16 binary diffusion model achieves FID~23.33 and 89.77\%
-legibility---functional parity with the FP16 baseline (FID~29.82)---at a 32$\times$ memory
+Our natively trained W1A16 binary diffusion model achieves FID~24.24 and 89.45\%
+legibility---functional parity with the FP16 baseline (FID~29.60)---at a 32$\times$ memory
 reduction and 58$\times$ computational speedup, with no knowledge distillation from a
 full-precision teacher. These results establish that 1-bit diffusion manifolds are
 structurally sound when grown natively, and that the structural dominance property of
