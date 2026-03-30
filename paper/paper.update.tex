@@ -1,0 +1,765 @@
+\begin{Summary}
+ Developing gene diffusion models in resource-limited state-of-the-art devices is a challenge
+ Stack due to memory and computational overhead of floating point operations. Duration
+ Existing literature states that extreme 1-bit weight quantization is an optimal solution
+ Reducing information bandwidth to this level will inevitably lead to disaster
+ mental breakdown. We challenge this consensus. This article shows:
+ The diversity collapse at the 1-bit limit is not an inherent hardware penalty, but a serious disaster
+ Artifacts of the post-training quantification (PTQ) paradigm. we present
+ \textbf{native binary}, a platform for fully training diffusion models
+ Rake features 1-bit weighting, center scaling, and pre-trigger structure. us
+ We formulate two main characteristics of its success: \emph{structural advantage}---h
+ The double center of gravity maintains the shape of the main steering weight---e.g
+ \emph{Topological stability} is the ability of a binary network to maintain diversity
+ Honesty comes from education. Heavy hardware ablation W1A16 (binary weight,
+ This is absolutely true when continuity is enabled. ) We demonstrate this using a standard PTQ setup
+ The structure topology is severely corrupted (FID: ~381). 79, readability: ~0. 00%\%), our
+ The initially developed binary model maintains strict topological stability and achieves functional performance
+ Parity vs. unquantized FP16 baseline (FID: ~24. 22. Readability: ~89. 92%. ARRIVE
+ The results show that the single-domain diffusion manifold is well structured during the evolution process
+ Basically – there is no teaching model or distillation of knowledge – that is open
+ Reduces memory by 32 times and speeds up calculations by 58 times without any loss
+ Semantic advantages. To our knowledge, this is the first demonstration of such a binary
+ The diffusion model can be trained from scratch until it has the same features as the model
+ equivalent to full resolution.
+ \end{Summary}
+
+ \noindent\textbf{Keywords:} 1-bit quantization, propagation model, generative artificial intelligence, model compression, topology,
+ Resonate, Edge AI, Structural Domination, Binary Neural Networks
+
+ %=======================================================================
+ \Part{Input}
+
+ Unparalleled creative potential of Dhanose editing models
+ Artificial intelligence paradigm shift. A probabilistic model to prevent diffusion
+ (DDPM)~\cite{ho2020ddpm} Advanced image synthesis quality achieved worldwide
+ The fields are different, but their usage remains basic
+ High performance floating point hardware. This is a must for edge computing
+ The integration of artificial intelligence into devices is increasing despite traditional thermodynamic limitations
+ Floating-point arithmetic becomes a major obstacle: divide into 1000 steps
+ Currently, standard FP16 precision sample loops are implemented in mobile or IoT devices
+ insoluble.
+
+ Extreme quantization: 1 bit, i.e. 16 or 32 bits, especially in binary
+ Floating point weights are compressed into individual bits, which promises excellent compression
+ Order-of-magnitude and reduction relationships of memory and arithmetic operations. double
+ Weights allow double accumulation (MAC) and are replaced by XNOR pop counts
+ Energy and silicon industries have much lower operating costs. room
+ There is general consensus in the recent literature that this extreme quantification is necessary
+ Incompatible with complex data distributions required for deployment-based production.
+ Latest research on the topic: double diffusion models
+ (BiDM)~\cite{bidm2024}, published in NeurIPS 2024 --- The conclusion is 1-bit binarization
+ This can lead to catastrophic collapse of the resulting reservoir and requires careful planning
+ Teachers refine their knowledge in the most precise way and restore productivity.
+
+ We refute this story. We have previously established that topological destruction exists
+ Operationality is not an inherent feature of the limitations of 1-bit hardware, but it is an important one
+ Weaknesses of the popular \textbf{Training Post-Quantization (PTQ)} Paradigm. PTQ
+ This example treats binarization as a \emph{compression problem}. Needs fine tuning
+ FP16 propagates the model and divides its weights into separate post-hoc binary states. this
+ Train-then-quantize approach suddenly destroys perfectly optimized weights
+ This complex disrupts the anterograde signaling pathway and produces the desired results
+ Structural collapse and the origin of abstract noise.
+
+ In this article we propose a paradigm shift from PTQ to \textbf{Native Binarization}---
+ Reframe dualism as a problem of representation rather than a problem of compression
+ calamity. We assume that a functional binary generation array can be constructed as follows:
+ From the first step, the network is initialized and trained completely according to the binary constraints.
+ Our educational architecture does not use trained itinerant teachers
+ Use 1-bit weights from scratch using two main mechanisms: (1)~\textbf{mean-centred
+ \emph{Structural advantage} --- Improved weighted scalability of binary system properties}
+ The weighting method captures the dominant directional structure of the weight field and
+ (2)~\textbf{Remaining orders before activation} (BN $\to$ $\to$ conversion action) saved
+ \emph{topological stability} by ensuring correct gradient flow using binary signatures
+ Work throughout training.
+
+ We provide rigorous dematerialization research to comprehensively validate this paradigm shift
+ The trigger resolution is fixed at FP16 (W1A16 system) and the effects are separated
+ The binarization method is for weights only. Our results convincingly demonstrate this typical PTQ
+ The optimization completely breaks the generated structure limited to 1 bit
+ (Last ID code: ~381. 79, readability: ~0. 00\%) inherits the default binary function
+ Topology equivalent to FP16 reference scenario (FID: ~24. 22, Readability: ~89. 92%. this
+ This approach removes and enforces more than 96% of the inaccuracies in the model parameters
+ Streaming architecture reduces storage weight by 32x and increases speed by 58x
+ Eliminates binary functions and numerous error problems.
+
+ \textbf{Contribution. } This article makes the following contributions:
+ \begin{article}
+ Item We provide the first proof that a 1-bit propagation model is trainable
+ Once again---distillation of knowledge without a specific teacher,
+ o Trained barriers: achieving functional equivalence to the FP16 baseline.
+ This directly challenges the following common assumptions:
+ BiDM~\cite{bidm2024} Faculty-led distillation is a necessary prerequisite for achieving this goal
+ double spread.
+ \item We formalized two principles ---\textbf{Structural advantages} (protection
+ Geometry exerts a directional pull due to the duality of centers) and
+ \textbf{Topological stability} (consistent stability due to preactivation)
+ Sequence) --- Provides a theoretical explanation for why we use our own pairwise training
+ Succeed where the PTQ failed miserably.
+ We designed solid\textbf{W1A16 hardware ablation} to isolate item effects
+ By creating a weighted binarization method of activation quantization noise,
+ I first checked the comparison between the PTQ and the single-digit pre-workout
+ Border. This experimental device can be used to clearly determine cause-effect relationships for a number of phenomena
+ Simplified to PTQ format without 1-bit resolution.
+ \item We propose \textbf{readability score}, which is a topological commitment to a particular instance
+ Indicators that complement FID and have proven useful in combating discrimination
+ The quality of the construct validity distribution for the FP16 and W1A16e samples
+ W1A1 diet.
+ \end{Show details}
+
+ % =====================
+ \section{Working with the topic}
+
+ \subsection{diffusion and edge growth models}
+
+ DDPM~\cite{ho2020ddpm} defines a direct Markov process that gradually destroys data
+ We use Gaussian noise in step $T$ and learn the inverse representation network $f_\theta$
+ Update clear image. The objectives of this training are:
+ \start{equation}
+ \mathcal{L} = \mathbb{E_{x_0,\varepsilon,t}\! \Leave[
+ \left\|\Faripsilon - f_\Theta\! \left(\sqrt{\bar\alpha_t}\,x_0 +
+ \sqrt{1-\bar\alpha_t}\,\varepsilon,\;t\right)\right\|^2\right]
+ \label{equivalent:ddpm}
+ \end{equation}
+ where $\bar\alpha_t = \prod_{i=1}^{t}(1-\beta_i)$. Next step to fix
+ (DDIM~\cite{song2020ddim}, LDM~\cite{rombach2022ldm}, SDXL~\cite{podell2023sdxl}) where
+ The wide range of product quality is great, but everyone comes to the same conclusion
+ Runs hundreds to thousands of network assessments. Building a diffusion model
+ Edge implementation mainly focuses on sampling efficiency (reducing the number of steps)
+ or~\cite{salimans2022progressive}) or pruning the shape, but not yet complete
+ Handling the basic precision cost of floating point arithmetic.
+
+ \subsection{Numerical limits even after training}
+
+ Post-training quantization (PTQ) compresses a pre-trained model by mapping it
+ The floating point parameter represents the smallest number of bits without retraining.
+ Q-Diffusion~\cite{li2023qdifuse} and PTQD~\cite{he2023ptqd} represent PTQ
+ 4-bit and 8-bit precision implementation models with acceptable performance degradation.
+ EfficientDiffusion and TDQ solve this problem by introducing quantization correction in time steps
+ Indeed, the activation distributions in diffusion models vary enormously
+ Timestamps, unique, improve continuous quantization.
+
+ However, as the bit depth decreases, PTQ deteriorates significantly. 1 bit precision
+ The measurement error becomes very large compared to the pretrained human body weight
+ Unable to register solution collector. The results of our experiments have catastrophically confirmed this
+ 1 item (FID: ~381). 79, readability: ~0. 00%) for PTQ W1A16.
+
+ \subsection{1-bit binary constraints}
+
+ binary neural network
+ Determine weights and activations based on (BNN)~\quote{hubara2016bnn,rastegari2016xnornet}
+ $\{-1,+1\}$, enable the number of XNOR pop-ups. XNOR-Net displays the measured values ​​for each channel
+ Coefficient that reduces the quantization error ($\alpha = \text{mean}|W|$). straight path
+ The estimator (STE)~\cite{bengio2013ste} estimates the slope based on:
+ Signed and indistinguishable functions enable end-to-end BNN training. BNN is
+ This has been successfully applied to recognition tasks (images)
+ class~\cite{liu2020reactnet,martinez2020training}) and apply it to generation
+ The form must preserve the overall geometry of the data distribution
+ Limited namespace projects - largely unexplored.
+
+ BiDM~\cite{bidm2024} is the first work to fully integrate the diffusion model
+ (W1A1), FID reaches ~22. LSUN Room Package $74.256{{time}$256
+ Adaptive binary structure (TBS) and spatial compensated distillation (SPD). two-way instant messaging
+ gives 28. Reduce memory size by 0$\times$ and 52. Save $\times$7 on operating costs. critical,
+ BiDM requires qualified, qualified and highly trained teachers
+ Our work ends addiction forever.
+
+ \subsection{Remaining network before activation}
+
+ He and others. ~\cite{he2016preact} shows batch normalization and trigger positions
+ Pre-convolution increment (pre-execution order: BN $\to$ Act $\to$ Conv)
+ Gradient flow in deep residual networks. Preboot command for BNN
+ Another meaning: BatchNorm normalizes the distribution to the expected level before the run
+ Zero mean and unit variance, calibrate the input to find the decision boundary of the signal function
+ Improve the effectiveness of STE during training.
+
+ % ===================================================================================================
+ \section{Binarization problem: compression and. \show}
+
+ \subsection{Dealer folding mechanism}
+
+ The denoising function learned in the $f_\theta$ diffusion model implicitly encodes the results
+ Data distribution --- directional gradient $\nabla_x \log p_t(x)$ control
+ Noisy monsters are heading towards the data collector. For a given point type, the point plane
+ Defines the boundaries of the manifold in pixel space. These are multidimensional addresses
+ Structure encodes spatial topology (linear) and category membership.
+
+ When PTQ is applied to a pre-trained FP16 model, each floating point has a weight
+ $w_o \in \mathbb{R}$ is replaced by $\text{sign}(w_o)\cdot\alpha$
+ Value $\alpha = \text{mean}|W|$ compensation. do work
+ There is no bias after learning the layers one by one. Binary quantization has been removed
+ Collapse a fully ordered fractional space into discrete sets
+ binary response. Broadcast networks reinforce this difference
+ $T=1{,}000$ steps, leading to some obvious crashes.
+
+ \subsection{Basic binarization as a representation problem}
+
+ Native binary processing solves the problem: instead of floating point compression
+ To convert a manifold into a binary constraint, we ask the network to identify the binary manifold
+ new. Double-weighted network initialized and trained from scratch for DDPM target
+ A stochastic binary initiation is also represented by a gradient descent through STE
+ The weighting parameters $\{-1,+1\}$ help minimize noise loss. What
+ [Result] Binary weights are not a degenerate approximation of floating point weights
+ These themselves are binary solutions to the DDPM target and encode the partition space in some way
+ However, different representation architectures have the same functionality.
+
+ The basic assumption of basic binary is that it essentially creates a binary solution
+ exists and can be achieved by the gradient descent method under the condition (1) ~ binary approximation
+ The mass gradient at each step is sufficient to obtain a signal (\emph{structure)
+ Advantage}) and (2) ~ The gradient of the symbolic function is always constant
+ Modulation (\emph{topological stability}).
+
+ % ===============
+ \Part{Methodology}
+
+ \subsection{original 1-bit broadcast structure}
+
+ We implement the flat remainder of U-Net~\cite{ronneberger2015unet} using the channel width
+ $[64, 128, 256]$ and two-stage spatial subsampling (MaxPool2d, $\times2$) and
+ Parallel sampling step (nearest neighbor, $\times2$). the connection is ignored
+ This is achieved by combining channels at each resolution level. The model is a work in progress
+ $28{\times}$28 Monocan MNIST photo~\cite{lecun1998mnist}.
+ Figure~\ref{fig:arch} shows the general structure.
+
+ \begin{image[t]
+ \concentration
+ % ---- TikZ: U-Net Architecture Diagram ----
+ \start{tikzphoto}[
+ font = footer size,
+ jam/. style={rectangular, rounded=2 points, layout=black! 70
+ Padding = #1, MinWidth = 1. 35 cm, minimum height = 0. 44 cm,
+ sep=2pt} middle text,
+ shake/. style={rectangle, rounded corners=2pt, design=green! 60! Black,
+ Fill = green! 18. minimum width = 2. 9 cm, minimum height=0. 44 centimeters,
+ body, inner delimiter = 2pt};
+ He has arrived/. style={-{invisible[length=4pt]},bold},
+ Jump /. style={-{stealth[length=4pt]}, dashed, gray! 65, often};
+ until/. style={-{privacy[length=4pt]}, green! 60! black, thick},
+ Node distance = 0. 24 cm and 0. 9 cm
+   ]
+
+% ----Encryption (left column, top to bottom) ----
+ \node[block=blue! 15](inches){convert\,1$\! \Come\! $64};
+ \node[block=blue! 20.bottom=in] (e1) {ResBlock\,64};
+ \node[block=blue! 25.bottom=e1's] (d1) {Down\,$\times$2};
+ \node[block=blue! 30. down=d1](e2){ResBlok\,128};
+ \node[block=blue! 35. From bottom up=e2](d2){Down\,$\times$2};
+ \node[block=blue! 45, down=d2] (bot) {unlock\,256};
+
+ % ----Decoder (right column, aligned with encoder) ----
+ \node[block=cam! 15. Right=0. 9 cm inside] (outside) {Conv\.$64\! \Unpleasant\! $1 };
+ \node[block=orange! 20. alt=start](start1){ResBlock\,64};
+ \node[block=camera! 25. down=de1](u1){up\,$\times$2};
+ \node[block=orange! 30. bottom=u1's] (d2) {resblock\,128};
+ \node[block=camera! 35. Down=di2](u2)(up\,$\times$2};
+ %u2 connects to the bot below - controlled with arrows
+
+ %----Constant time (centered at the bottom of the bottleneck, excluding all nodes)----
+ \node[pattern, bottom=0. 55 cm legs](also)
+ {Sine wave symbol. \,$\ to $\,MLP};
+
+ % ---- Main encryption stream (top → bottom) ----
+ \foreach \a/\b in {en/e1, e1/d1, d1/e2, e2/d2, d2/bot}
+ \sleep[arr] (\a) -- (\b);
+
+ % ---- Stagnation → First decryption block ----
+ % path: all along the lower plane of y (under all decoder nodes), then down to u2. South
+ \drag[arr](robot. Yes)-| (u2. south);
+
+ %----Decoder stream (bottom → top)----
+ \foreach \a/\b in {u2/de2, de2/u1, u1/de1, de1/out}
+ \marks[array] (\a) -- (\b);
+
+ % ---- Ignore call ----
+ \Draw[Jump](e1. yes)-|++(0. 2, 0) |-(de1. West)
+ node[position=0. 25, top, grey! 80, font=\small]{cat};
+ \drag[drop](e2. this) -| ++(0. 2, 0) |-(D2. West)
+ button [position=0. 25, large, grey! 80, source=\small]{cat};
+
+ % ---- Time arrow (added to all blocks through exposure learning) ----
+ \sign[garr] (t. Reply) -- (send). South)
+ Intersect [center, right, line=\small, green! 60! black]{any block};
+
+ \end{Check the image}
+ \caption{The rest of the U-Net architecture for all three versions of the model (FP16,
+ W1A16, W1A1). Decoder structure for channel width [64, ~128, ~256],
+ Ignore the connections (dashed lines, cross connections) and insert a sinusoidal time integral
+ (green) Same for all species. Convolution type only (Conv2d/
+ BitConv2d\_Std / BitConv2d\_BNN). }
+\label{shape: arc}
+ \end{Photo}
+
+ \textbf{Temporary edit. } sinusoidal position
+ Dimension 32~\cite{vaswani2017attention} is achieved through two-level MLP
+ Create a runtime $t_\text{emb} \in \mathbb{R}^{32}$. on any residues
+ For blocks, the learned linear projection corresponds to the $t_\text{emb}$ channels of the blocks
+ Intermediate measurements and features are moved to the map and time steps are added
+ Context at every level of analysis.
+
+ \textbf{Boundary layer rule. First convolutional layer ($1{\to}64$ channels)
+ The final output level ( $64{\to}1$ channels) maintains maximum accuracy across all channels
+ This version follows standard BNN conventions to maintain accuracy on internal interfaces
+ Limit the pixel area.
+
+ \subsection {Pre-activation block structure}
+
+ All remaining binary blocks follow the pre-activation order, as shown below
+ size ~\ref{size:block}. Formal directed paths through individual binary residues
+ These blocks are:
+ \start{match*}
+ h &\lefttrow \text{double action}\! \left(\text{BN}(x)\right) \
+ h &\leftarrow \text{BinaryConv2d}(h)\
+ h &\leftarrow h + \text{linear}(t_\text{emb}) \
+ h &\leftarrow\text{BinaryAct}\! \left(\text{BN}(n)\right)\
+ h &\lefttarrow \text{BinaryConv2d}(h) \\
+ \text{output} &\leftarrow h + \text{skip}(x)
+ \end{sort*}
+
+ When the channel size changes, \texttt{skip} becomes 1$\x$1 BinaryConv2d. or
+ otherwise identity.
+
+ \begin{image[t]
+ \concentrated
+ % ---- Tikz: Block before activating ----
+ \start{tikzpictureNi
+ font=\small,
+ Look/. style={rectangle, rounded=3 pt, shape=black! 70,
+ padding = #1, minimum width = 2. 6 cm, my height = 0. 5cm,
+ central text},
+ future/. style={-{privacy[length=5pt]},bold},
+ dance/. style={-{Stealth[length=5pt]}, dotted line, gray! 60, thick},
+ node distance = 0. 3cm
+   ]
+
+\node[op=Grey! 15] (x) {element$x$};
+ \node[op=yellow! 30. down=x](bn1){batchnorm};
+ \node[op=red! 20. down=bn1a](ba1){double activation};
+ \node[es=blue! 25, alt=ba1](bc1) {BinaryConv2d};
+ \node[op=green! 20. Down=bc1](te) {$+\;\text{linear}(t_\text{emb})$};
+ \node[op=yellow! 30.bottom=die](bn2)(BatchNorm};
+ \node[op=red! 20. base=bn2](ba2) {binaryactivation};
+ \node[op=cyan! 25. Down=from ba2](bc2) {BinaryConv2d};
+ \node[op=gray! 15.under=bc2](output){output};
+
+ % main dish
+ \foreach \a/\b in {x/bn1, bn1/ba1, ba1/bc1, bc1/te,
+ te/bn2, bn2/ba2, ba2/bc2, bc2/exit}
+ \drag[arr] (\a) -- (\b);
+
+ % ignore
+ \sign[skip] (x. Example)-++(1. 1.0) |-(output. this)
+ node [bos = 0. 25. Right, font=\footnote size, gray]{skip};
+
+ \end{tikzphoto}
+ \caption{Binary blocks remaining before starting. Apply BatchNorm \emph{first}
+ By running BinaryActivation on the two lower levels, writing a signed function is guaranteed
+ Centered around zero during training (topological stability). A leap of recognition
+ Compounds provide a graded flow to the surface layers. }
+\label{image:block}
+ \end{image}
+
+ \textbf{Achieve topological stability through pre-start sorting. Main features
+ BatchNorm normalizes the activation values ​​to an average value close to zero
+ Unit variance is estimated using the sine function \emph{previous}. This will give you a binary file
+ Calibrate the decision boundaries continuously (to zero) during training. THE
+ As a result, there are no systemic neuronal death effects and no progressive starvation occurs
+ About S.T.E. Let's formalize it as \textbf{topological stability}
+ Condition: The binary representation of the network maintains sufficient dynamic stability
+ Support diversity by encoding different data distribution ranges at the category level
+ Topologically coherent generation.
+
+ \subsection{Mean-centered duality (structural properties)}
+
+ For the W1A16 model \texttt{BitConv2d\_Std} --- two-weighted convolution is used
+ At medium concentration. $W \in \mathbb{R}^{C_\text{out} \times C_\text{in} \times k
+ \time k}$ will be the convolutional weight tensor, $w_o \in \mathbb{R}^{C_\text{in}k^2}$
+ Flat core with $o$ outlet channel.
+
+ \textbf{Virtual binary (non-centered):}
+ \begin{equation}
+ \tilde{w__o = \operatorname{character}(w_o)\cdot\alpha_o,
+ \Social class
+ \alpha_o = \frac{\|w_o\|_1}{C_\text{i}\cdot k^2}
+ \label{Equivalent: std-bin}
+ \end{equation}
+
+ \textbf{Central Binary (\texttt{BitConv2d\_ARD}):}
+ \begin{equation}
+ \bar{w}_o = w_o - \mu_o,
+ Quarterly
+ \mu_o = \operator name{mean}(w_o)
+ \label{equation:average}
+ \end{Equation}
+ \start{equation}
+ \hat{w}_o = \operator name{character}(\bar{w}_o)\cdot\bar\alpha_o,
+ \Four
+ \bar\alpha_o = \frac{\|\bar{w}o\|_1}{C_\text{i}\cdot k^2}
+ \label{equivalent:sinbin}
+ \end{equation}
+
+ \textbf{Structural advantages. }Rotation removes isotropic DC components
+ Extract $\mu_o$ from the weight vector and extract its directional structure. Signature function
+ Then convert these directions to binary and use $\bar\alpha_o$ as a surrogate measure. 
+ The resulting binary filter $\hat{w}_o$ \emph{dominated by structural stress}
+ $w_o$: The average mean step minimizes the angular error due to duality
+ Because the sign of the zero-mean vector is more sensitive to the true direction
+ Vector signal distribution instead of components with strong DC variation. Have
+ This is especially important in broadcast networks where convolutional filters are required
+ Encoding directional interrupt responses for fractional field estimation.
+
+ \subsection{Slope approximation using direct estimator}
+
+ Binary weights and activation sign functions are indistinguishable from each other. we
+ \textbf{direct estimator} is used
+ (STE)~\quote{bengio2013ste} to pass the gradient through the binary phase.
+
+ \textbf{STE(\texttt{BitConv2d\_ARD} and\texttt{BitConv2d\_BNN}) :}
+ \begin{equation}
+ w_\text{forward} = \bottom{(\hat{w}_o - w_o)}_{\text{degree stop}} + w_o
+ \label{eq:ste-w}
+ \end{equation}
+
+ \textbf{Enable STE (W1A1, trim only):}
+ \begin{expression}
+ \text{binaryAct}(x) = \operatorname{character}(x),
+ \Quadplex
+ \frac{\partial\,\text{Double task}}{\partial x} = \mathbf{1 count|x|\le 1]
+ \label{equation:stay-a}
+ \end{equation}
+
+ Extracting zero crossings for STE input data~\cite{courbariaux2016clippedste}
+ $|x|>1$, avoids instability caused by anomalous activation by preserving the gradient
+ Central liquidity.
+
+ % ===============================================================
+ \section{Experimental setup}
+
+ \subsection{Model structure and initialization}
+
+ We estimate three model variants with the same network topology U. This is briefly explained in ```
+ Table~\ref{Tab: Differences}.
+
+ \start{Table}[h]
+ \middle
+ \caption{model variable}
+ \tab{tab:variation}
+ \footnote size
+ \begin{table}{@{}llll@{}}
+ \topedit
+ behavior of \textbf{change} and \textbf{weight} and \textbf{. } & \textbf{keystore} \\
+ \Middle rule
+ ResUNet\_FP16 and FP16 and FP16(SiLU) and Conv2d \\
+ ReSUNet\_W1A16, 1 bit, center, FP16 (SiLU), BitConv2d\_ARD\
+ ResUNet\_W1A1 and 1 bit, unintentional and 1 bit (terminal. \STE) and BitConv2d\_BNN\
+ \subrule
+ \end{table}
+ \end{array}
+
+ All models are initialized using the default PyTorch initialization. Use all experiments
+ Standard DDPM training objective using linear noise program $\beta \in
+ [10^{-4},\,0. 02]$ as long as $T=1{,}000$. educational purposes
+ AdamW~\cite{loshchilov2019adamw} (lr $=10^{-4}$) for 100 epochs in MNIST training
+ Settings (60{,}000 images, 28${\times}28$ grayscale, normalized [-1,1]$). batch size
+ In total there are 16 variations. Since when does MLP use the ReLU operator in FP16
+ GELU for W1A16 and W1A1.
+
+ \subsection{W1A16 Quarantine Strategy}
+
+ The most important experimental contribution of this work is \textbf{hard material removal}
+ Fixed trigger accuracy for FP16 by changing only the weighted bit level
+ strategy. This isolates the effect of the binary method (PTQ and PTQ). \local)
+ From confounding sources such as activation quantization noise. To compare:
+
+ \start{register}
+ \item \textbf{ResUNet\_W1A16 (Original):} Training from the ground up
+ \texttt{BitConv2d\_Std}.
+ \item \textbf{ResUNet\_W1A16(PTQ):} FP16 model trained using inverse weights
+ Binarization via \texttt{BitConv2d\_Std}. The Bias and BatchNorm flags are:
+ registered; Only emotional weights are binary.
+ \end{more}
+
+ This property indicates a clear causal relationship for the observed differences in obstetric quality
+ The connection between these two types suggests teaching methods
+ disk. \Binarization after learning---no computation precision.
+
+ \subsection{Evaluation scale}
+
+ \textbf{Initial Fr\'echet distance (FID). } FID measurement~\cite{heusel2017fid}
+ Multivariate Gaussian distance fitted to the InceptionV3 function
+ $N=2{,}000$ of generated samples and MNIST test suite is used. This image is an example of:
+ $28{\times}28$ to $299{\times}299$ are copied to 3 via bilinear interpolation
+ Channel before feature extraction:
+ \begin{equation}
+ \text{FID} = \|\mu_r - \mu_g\|^2 +
+ \operator name {Tr}\! \left(\Sigma_r + \Sigma_g -
+ 2(\Sigma_r\Sigma_g)^{1/2}\right)
+ \label{equivalent:width}
+ \end{expression}
+
+ \textbf{Read music score. We provide task-specific metrics to evaluate the topology
+ Stability: The average maximum classification reliability of the generated samples is $N=1{.}000$
+ A full MNIST classifier trained independently on real MNIST data:
+ \begin{expression}
+ \text{reading} = \frac{1}{N}\sum_{i=1}^{N}
+ \max_{k\in\{0,\ldots,9\}}P\! \left(k \mid x_i^{\text{gen}}\right)
+ \label{eq:readability}
+ \end{sentence}
+ Previous point 1. 0 represents a topologically strict formation of digits. the ratio is close to 0. 10
+ (Random) indicates a malfunction.
+
+ %==
+ \section{Results and analysis}
+
+ \subsection{Quantitative equivalence and topological stability}
+
+ Table~\ref{tab:main} shows the main quantitative results for W1A16
+ different.
+
+ \start{array[h]
+ \concentration
+ \caption{W1A16 Cut out document: root and origin. \Post-training quantization}
+ \label{Tab:Home}
+ \begin{table}{@{}llcc@{}}
+ \topEdit
+ \textbf{model} & \textbf{strategy} & \textbf{FID~$\downarrow$} &
+ \textbf{Readability~$\uparrow$} \\
+ \intermediate rule
+ ResUNet\_FP16&Basic&---&---\
+ ResUNet\_W1A16 & \textbf{This machine (ours)} & \textbf{24. 22}&\textbf{89. 92\%}\
+ ReSUNet\_W1A16&PTQ&381. 79 and 0. 00\%\
+ \ Intermediate rules
+ ResUNet\_W1A1 & \textbf{This device (USA)} & \emph{[Waiting]} & \emph{[Waiting]} \\
+ ReUNet\_W1A1&PTQ&\emph{[Standby]}&\emph{[Standby]}\
+ Basic rules
+ \end of table}
+ \endtable}
+
+ The results are obvious at first glance. Baseline PTQ was completely broken: FID 381. 79 represents one
+ This data is far from the real MNIST data provided by InceptionV3
+ Reality is vertical and zero. Readability 00% means nothing is generated
+ The sample achieved significant interrater reliability. Locally trained W1A16 model,
+ For comparison: FID reaches 24 points. 22 Reading 89. 92%, indicating functional equivalence
+ Reference FP16 HD. Figure~\ref{Fig:Chart} shows the difference.
+
+ \begin{image[h]
+ concentration
+ % ---- pgfplots: FID plots and bar readings ----
+ \begin{tikzimage}
+ \begin{axis[
+ Ivar
+ bandwidth = 9pt;
+ width=0. 65\column width,
+ height=4. 8cm,
+ Zoom limit x = 0. 35
+ Symbol coordinates x = {original W1A16, W1A16 PTQ},
+ xwink=data,
+ x text label style={font=\footnotesize,align=center},
+ Ming=0,
+ Signature style={font=\footnote size},
+ Check labelstyle={font=\footnotesize},
+ Notestyle={font=\footnotesize, at={(0. 5.-0. 32)}, again = n,
+ Bible column = 2},
+ y-axis*=left,
+ x*=bottom axis line,
+ yamajorgrids = true,
+ Grid style = dashed,
+ syllable = wrong,
+ header style={font=\footnotesize\bfseries},
+ ]
+%FID bar (left shoulder - longer is not good, so we show the shorter version)
+ \addplot[fill=blue! 45, tie = green! 60]
+ Coordinates { (prototype W1A16, 24. 22) (W1A16 PTQ, 200)};
+ \addlegendentry{FID $\downarrow$ (PTQ reduced to 200 for scaling)};
+
+ Sharpen bar %
+ \addplot[content=orange! 55. Tie = Orange! 70]
+ Coordinates {(area W1A16, 89. 92)(W1A16PTQ,0)};
+ \adddlegendentry{read \% $\uparrow$};
+
+ Actual FID-PTQ Comment Ratio
+ \node[font=\tiny, top] in (as cs:W1A16 PTQ, 200) { currently: 381. 79};
+ \end{axis}
+ \end{tikzimage}
+ \caption{FID (lower is better, blue) and readability \% (higher is better, orange)
+ Two W1A16 versions. For readability, the number of PTQ FID segments is limited to 200 segments
+ Price is 381. 79. Native binarization restores the quality and topology of the distribution
+ continuation; PTQ makes both indicators zero. }
+\label{image:graphic}
+ \end{image}
+
+ \subsection{Visual evidence of increased damage}
+
+ Figure ~\ref{fig:fp16}--\ref{fig:compare3way} provides the following simple visual guide
+ Quantitative declaration.
+
+ \begin{image}[t]
+ \center
+ \subfloat{\includegraphics[width=0]. 35\column width]{. /assets/fp16_1. png}}\hfill
+ \subfloat{\includegraphics[width=0. 35\column width]{. /assets/fp16_2. png}}
+ \caption{ResUNet\_FP16 (full precision baseline). The numbers are clear and varied
+ Structure link to another department. A reference quality roof for everyone
+ Pressure changes. }
+\label{Image: fp16}
+ \end{image}
+
+ \begin{image[t]
+ Important points
+ \subfloat{\includegraphics[width=0. 35\column width]{. /assets/w1a16_nostro_output_1. png}}\feelings
+ \subfloat{\includegraphics[width=0. 35\column width]{. /assets/w1a16_our_output_2. png}}
+ \caption{Locally trained ResUNet\_W1A16 (\textbf{structural dominance}: centroid
+ weight 1 bit, trigger FP16). Visually understand numerical structure and class diversity
+ FID 24 protected. 22 and 89. Ease of reading 92%. }
+\tag{image:w1a16nat}
+ \end{picture}
+
+ \begin{image]
+ \Centralization
+ \include graphics[width=0. 45\Column width]{. /assets/w1a16_Quantized_1. png}
+ \caption{PTQ ResUNet\_W1A16 (FP16 model with post hoc coding). go out:
+ Structurally inconsistent noise that does not have a consistent and discernible digital topology
+ FID 381. 79 and 0. 00% readable. Typical symptoms of repeated accidents
+ 1-bit PTQ limit. }
+\label{image:w1a16ptq}
+ \end{picture}
+
+ \begin{form[t]
+ \Focus
+ \subfloat{\includegraphics[width=0]. 35\column width]{. /assets/w1a1_our_output_1. png}}\are
+ \subfloat{\includegraphics[width=0]. 35\column width]{. /assets/w1a1_our_output_2. png}}
+ \caption{ResUNet initial training\_W1A1 (1 full bit: binary weight and binary weight)
+ activation, STE pre-activation command aborted). Although the calculation is binary,
+ The digital topology is largely preserved, confirming the degree of \textbf{topological stability}
+ In a complete binary system. }
+\label{image:w1a1nat}
+ \end{image}
+
+ \begin{image}[t]
+ \middle
+ \includegraphics[width=0]. 45\column width]{. /assets/w1a1_Quantized_1. .png}
+ \caption{PTQ ResUNet\_W1A1 (Fully coded FP16 model: weights and activations).
+ Binarization triggering exacerbates weight quantization errors and causes other problems
+ Structural deformation according to PTQ W1A16 (Figure 1). ~\ref {format:w1a16ptq}). }
+\label{Photo: w1a1ptq}
+ \end{picture}
+
+ \begin{image[t]
+ \center
+ \subfloat[FP16]{\includegraphics[width=0. 22\column width]{. /assets/fp16_1. png}}\feeling
+ \subfloat[special code W1A16]{\includegraphics[width=0. 22\column width]{. /assets/w1a16_nostro_output_1. png}}\hfill
+ \subfloat[origin W1A1]{\includegraphics[width=0. 22\column width]{. /assets/w1a1_nostro_output_1. png}}
+ \caption{Three-way comparison. Progressive gradient of qualitative adjustment
+ Information Theoretic Costs of Sequential Quantization: Locality Preservation W1A16
+ Loyalty is almost fundamental. W1A1 provides perfect consistency against aliasing
+ Reduce analog bandwidth for a full binary driver. }
+\label{Form:Compare3way}
+ \end{image}
+
+ \subsection{Increase hardware performance}
+
+ The W1A16 model receives the following theoretical hardware improvements compared to the W1A16 model
+ UNet\_FP16 Recovery:
+
+ \Start{Register}
+ \item \textbf{Memory:} Each binary convolution weight parameter takes up 1~bit
+ AND THE REST. \32~bits of standard FP32 memory ---\textbf{32$\times$ memory reduction}
+ Bitrate ($16 x FP16 output weights).
+ \item \textbf{Arithmetic operations:} Multiplication of binary weights is converted into a symbolic operation
+ Corresponds to the XNOR popcount operation --- subtraction of \textbf{58$\times$ in binary format
+ FP16 MAC counting operation (BOP, etc.). \flutter).
+ \item \textbf{Power consumption:} The power consumption of binary operations on dedicated hardware is approximately
+ 1 to 2 times less energy than the floating point equivalent.
+ \end{list}
+
+ This efficiency increase is obtained thanks to \textbf{free semantic gain}
+ 89. 92% readability verifies that the images generated by the compression model are accurate
+ At the numeric category level, semantic equivalence is achieved and a baseline of maximum precision is achieved.
+
+ % ======================================================================
+ \section{Discussion}
+
+ \subsection{Why PTQ fails on bit 1}
+
+ The catastrophic failure of PTQ at the 1-bit limit has a clear mechanical mechanism
+ The explanation lies in the context of structural domination. FP16 deploy model trainer
+ Code the score function with its relative size and weight sign. area
+ Quantization removes the order of magnitude and preserves only the signal. in that meeting
+ In the FP16 model, the letters of each weight have little independent meaning
+ Meaning: Meaning is encoded in large-scale interactions
+ filtered. Subsequent signal extraction completely destroys this structure.
+
+ Additionally, the FP16 and binary training scenarios are distinct. Number of saddle points
+ The minimum DDPM loss value under dual constraints is not close to the optimal value of FP16. BTK
+ Put the binary model into the ideal FP16 binary format. --- Not applicable
+ Ideal for non-binary point loss scenarios. Original duo
+ On the other hand, the training process for binary loss scenarios starts with initialization
+ Find the weight configuration $\{-1,+1\}$ that actually corresponds to DDPM
+ Goals under binary constraints.
+
+ \subsection{Structural advantages and structural advantages. \Distillation BiDM}
+
+ BiDM~\cite{bidm2024} reaches FID 22. 74 in LSUN dorm $256 {\times} $256 full price W1A1
+ Precision thanks to binary structure (TBS) that takes into account time steps and spatial refinement
+ (SPD). BiDM \emph{refined dependency}Teacher-related methods: dual model
+ The model must estimate the teacher's results fairly accurately. creates
+ Rigid dependency chains - Binary models cannot exist without them first existing
+ This is a completely accurate sample section. Initial \emph{unsupervised} binarization
+ This allows the binary network to define the geometry of its binary solution.
+
+ This distinction has important practical consequences. Previous training camp
+ Delivery models (custom medical images, new proprietary datasets) are not available
+ mod), is either too expensive to train with maximum accuracy or I broke it
+ Licensing restrictions do not apply to distillation. creative
+ Binarization completely eliminates this dependency and transforms the binary model into a single model
+ It requires no training, reduces overall education costs and eliminates the need to hire teachers
+ Miscellaneous expenses.
+
+ Structural control principle – dual mechanism with central load
+ The structure of the directional filter is preserved. This is an architectural addition to BiDM TBS
+ In theory, this could be integrated, improving the binary at each time step
+ Quality of weights in learnable binary structures.
+
+ \subsection{Topological stability as an efficient index}
+
+ Readability scores provide different information than FIDs. PID measurement tasks
+ Equality, diversity and conceptual quality are all rewarded in the feature film field, but at the same time
+ Independent of the topological commitment of each sample. Models that produce diverse results
+ But structurally uncertain outcomes could lead to modest investment at low interest rates
+ legibility. Therefore, the combination of FID and clarity provides additional information: FID
+ This measures whether the generator can cover the entire content delivery and reading at the same time
+ It measures whether individually created patterns have structurally valid members
+ distribution.
+
+ \section{restrictions}
+
+ In this study, we introduce the duality inherent in MNIST. Upgrade to a higher resolution
+ Datasets (CIFAR-10, CelebA, LSUN-Bedroom) are future work. Written comprehension must be assessed
+ Classifiers are task-specific and do not easily generalize to continuous domains
+ generations. The actual implementation requires a speed of $58\x$$
+ CUDA pop counting core or dedicated XNOR FPGA. Uses the current application template
+ PyTorch convolution with binary weights.
+
+ % ===========================================================================================
+ \Section {Conclusion}
+
+ We introduce \textbf{Native Binarization}, a system for learning 1-bit color consistency
+ This model is based on two formally defined principles: \textbf{due to structural advantages}
+ Esocentric weight binarization and \textbf {topological stability} by pre-activation
+ pending order. Through careful material removal of W1A16, we showed
+ Catastrophic multiple crash (FID: ~381. 79, reading level: ~0. 00% below normal observed
+ PTQ is not an inherent property of the 1-bit hardware limitation, but a consequence
+ Changing learning model.
+
+ The FID of our self-learning binary diffusion model is approximately 24. 22 and 89. Reading 92%---
+ Full precision FP16 based functional parity --- 32$\times$ memory
+ Reduce and increase calculation speed without heating 58$\times$
+ Mr. Guangming. These results indicate that this is an extended 1-bit variant
+ This structure is stable during the initial growth process and has structural advantages
+ The duality of the center of gravity provides the inductive bias needed to stabilize the duality
+ learn.
+
+ We believe that native binaries provide a viable path to uncensored software distribution
+ The deployment model is highly compressed on edge hardware with limited resources. 
+ The principles of structural superiority and topological stability presented here have a wide range of applications
+ Can be applied and extended to other manufacturing architectures: process mapping models,
+ Consistency model and hidden transfers: No need for 1-bit compression
+ The general burden of accuracy in teacher training. 
