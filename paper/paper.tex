@@ -60,30 +60,28 @@
 
 
 \begin{abstract}
-Deploying generative diffusion models on resource-constrained edge devices is severely
-bottlenecked by the memory and computational costs of floating-point arithmetic. While
-extreme 1-bit weight quantization offers an optimal solution, current literature asserts
-that reducing informational bandwidth to this degree inevitably causes catastrophic
-manifold collapse. We challenge this consensus. In this paper, we demonstrate that
-manifold collapse is not an inherent hardware penalty of the 1-bit boundary, but a fatal
-artifact of the standard Post-Training Quantization (PTQ) paradigm. We introduce
-\textbf{Native Binarization}, a framework that trains diffusion models entirely from
-scratch using 1-bit weights, mean-centered scaling, and pre-activation structures. We
-formalize two properties central to its success: \emph{structural dominance}---the
-preservation of dominant directional weight geometry through centered binarization---and
-\emph{topological stability}---the capacity of the binary network to sustain manifold
-integrity throughout training. Through a strict W1A16 hardware ablation (binary weights,
-fixed full-precision activations), we show that standard PTQ adaptation
-severely degrades generative quality (FID:~191.94, legibility:~64.92\%), while our
-natively grown binary model maintains strict topological stability and achieves functional
-parity with---and even slightly surpasses---the FP16 baseline
-(FID:~24.24 vs.~29.60, legibility:~89.45\% vs.~90.79\%). These
-findings establish that 1-bit diffusion manifolds are structurally sound when grown
-natively---without any teacher model or knowledge distillation---unlocking a
-32$\times$ memory reduction and 58$\times$ computational speedup without sacrificing
-semantic utility. To our knowledge, this is the first demonstration that binary
-diffusion models can be trained from scratch to functional parity with their
-full-precision counterparts.
+The memory footprint and arithmetic cost of floating-point operations remain the
+principal obstacles to running generative diffusion models on edge hardware. Reducing
+weights all the way down to a single bit would, in theory, resolve both issues---yet
+the prevailing view in the literature holds that such aggressive quantization destroys
+the generative manifold beyond recovery. This paper argues otherwise. We show that the
+collapse attributed to 1-bit precision is actually an artifact of the
+Post-Training Quantization (PTQ) workflow, not a fundamental limit of binary
+representation. To substantiate this claim we propose \textbf{Native Binarization}, a
+training regime in which diffusion models are built from the ground up with 1-bit
+weights, mean-centered scaling, and pre-activation block ordering. Two properties
+underpin the approach: \emph{structural dominance}, whereby centered binarization
+retains the dominant directional geometry of each weight tensor, and
+\emph{topological stability}, whereby the binary network preserves manifold coherence
+across the entire training trajectory. In a controlled W1A16 ablation---binary weights
+paired with full-precision activations---PTQ yields an FID of~191.94 and a legibility
+of only~64.92\%, whereas our natively trained counterpart reaches an FID of~24.24 with
+89.45\% legibility, marginally outperforming even the FP16 baseline (FID~29.60,
+legibility~90.79\%). No teacher network or distillation step is involved at any point.
+The resulting architecture offers a 32$\times$ reduction in weight storage and a
+58$\times$ speed-up in binary operations while preserving semantic quality. As far as
+we are aware, no prior work has demonstrated that a binary diffusion model trained
+entirely from scratch can match full-precision generation quality.
 \end{abstract}
 
 \noindent\textbf{Keywords:} 1-Bit Quantization, Diffusion Models, Generative AI, Model Compression, Topology,
@@ -92,82 +90,75 @@ ResUNet, Edge AI, Structural Dominance, Binary Neural Networks
 % ============================================================
 \section{Introduction}
 
-The unprecedented generative potential of denoising diffusion models has ushered in a
-paradigm shift in artificial intelligence. Denoising Diffusion Probabilistic Models
-(DDPMs)~\cite{ho2020ddpm} now achieve state-of-the-art image synthesis quality across
-diverse domains, yet their utilization remains fundamentally dependent on
-high-performance floating-point hardware. As the necessity for edge computing and
-on-device AI integration increases, the thermodynamic constraints of traditional
-floating-point arithmetic become a critical barrier: running a 1{,}000-step diffusion
-sampling loop on a mobile or IoT device under standard FP16 precision is presently
-intractable.
+Denoising diffusion models have rapidly become one of the most capable families of
+generative models in modern machine learning. Denoising Diffusion Probabilistic Models
+(DDPMs)~\cite{ho2020ddpm} routinely produce images of remarkable quality across a range
+of domains, but their reliance on floating-point matrix arithmetic ties them to
+power-hungry GPUs and server-grade accelerators. With growing demand for on-device
+intelligence---in mobile phones, wearables, and IoT sensors---this dependence poses a
+real problem. Executing the 1{,}000 sequential denoising steps that a typical DDPM
+requires is simply not feasible on an FP16 edge processor today.
 
-Extreme quantization---specifically, 1-bit binarization, where 16-bit or 32-bit
-floating-point weights are compressed to a single bit---promises massive compression
-ratios and order-of-magnitude reductions in both memory and arithmetic operations. Binary
-weights permit replacing multiply-accumulate (MAC) operations with XNOR-popcount
-operations, which are dramatically cheaper in energy and silicon area. However, the
-general consensus in recent literature is that such extreme quantization is fundamentally
-incompatible with the complex data distributions required for diffusion-based generation.
-The latest state-of-the-art research on this topic---Binarized Diffusion Model
-(BiDM)~\cite{bidm2024}, published at NeurIPS 2024---concluded that 1-bit binarization
-causes the generative manifold to catastrophically collapse, necessitating elaborate
-knowledge distillation from a full-precision teacher to recover generative utility.
+One appealing remedy is to push weight precision to its absolute minimum: a single bit.
+Compressing 16- or 32-bit floating-point parameters into $\{-1,+1\}$ values would
+replace costly multiply-accumulate (MAC) instructions with XNOR-popcount logic, cutting
+both memory and energy consumption by orders of magnitude. The catch, according to
+current research, is that such extreme compression fundamentally breaks diffusion
+models. The most recent investigation of this question---Binarized Diffusion Model
+(BiDM)~\cite{bidm2024}, presented at NeurIPS 2024---reported that binarization
+collapses the generative manifold entirely, and that an elaborate distillation pipeline
+from a full-precision teacher is the only viable path to recovery.
 
-We contest this narrative. We contend that the topological destruction observed in prior
-work is not an inherent property of the 1-bit hardware boundary, but rather a critical
-flaw in the prevailing \textbf{Post-Training Quantization (PTQ)} paradigm. The PTQ
-paradigm treats binarization as a \emph{compression problem}: it takes a finely tuned
-FP16 diffusion model and truncates its weights to discrete binary states post-hoc. This
-``Train-then-Quantize'' approach suddenly lobotomizes the finely optimized weight
-manifold, destroying the gradient signal pathways and producing the predictable result of
-severe structural degradation and a marked loss of generative quality.
+Our work takes issue with that conclusion. The manifold destruction documented in
+earlier studies, we argue, stems not from any intrinsic limitation of 1-bit
+arithmetic but from the way binarization has been applied---namely, through
+\textbf{Post-Training Quantization (PTQ)}. PTQ frames binarization as a
+\emph{compression task}: a carefully trained FP16 model has its weights snapped to
+binary values after the fact. This ``train first, binarize later'' pipeline strips
+away the finely tuned magnitude relationships that encode the learned score field,
+leaving behind severe structural damage and sharply reduced generation quality.
 
-In this paper, we propose a paradigm shift from PTQ to \textbf{Native Binarization}---
-reframing binarization as a \emph{representation problem} rather than a compression
-problem. We hypothesize that a functional binary generative manifold can be grown if the
-network is initialized and trained entirely within binary constraints from the first step.
-Rather than adapting a pre-trained floating-point teacher, our architecture is trained
-from scratch with 1-bit weights using two core mechanisms: (1)~\textbf{mean-centered
-weight scaling} that enforces \emph{structural dominance}---the property that the binary
-weight approximation captures the dominant directional structure of the weight space---and
-(2)~\textbf{pre-activation residual ordering} (BN $\to$ Act $\to$ Conv) that maintains
-\emph{topological stability} by ensuring correct gradient flow through binary sign
-functions throughout training.
+We take a fundamentally different approach.  \textbf{Native Binarization} treats the
+problem as one of \emph{representation} rather than compression. Instead of converting
+a floating-point model, we train a diffusion network from random initialization under
+binary weight constraints from the very first gradient step. Two design choices make
+this feasible: (1)~\textbf{mean-centered weight scaling}, which preserves what we call
+\emph{structural dominance}---the dominant directional structure of each filter is
+retained after binarization---and (2)~\textbf{pre-activation residual ordering}
+(BN $\to$ Act $\to$ Conv), which maintains \emph{topological stability} by keeping
+gradient flow through the sign function well-conditioned at every stage of training.
 
-To rigorously validate this paradigm shift, we provide a strict hardware ablation study
-with activation precision fixed at FP16 (the W1A16 regime), isolating the effects of the
-weight binarization methodology alone. Our results show that standard PTQ
-adaptation severely degrades generative quality at the 1-bit boundary
-(FID:~191.94, legibility:~64.92\%), while Native Binarization achieves functional and
-topological parity with the FP16 baseline (FID:~24.24 vs.~29.60 baseline,
-legibility:~89.45\% vs.~90.79\% baseline). This
-approach successfully removes over 96\% of the model's parametric precision, creating a
-diffusion architecture that is 32$\times$ smaller in weight storage, 58$\times$ faster in
-binary operations, and eliminates the problem of manifold collapse.
+We validate the idea with a tightly controlled W1A16 hardware ablation: activations are
+held at FP16 while only the weight binarization method varies. Under PTQ the model
+degrades sharply (FID:~191.94, legibility:~64.92\%). The natively trained binary model,
+by contrast, reaches FID~24.24 with 89.45\% legibility---on par with, and slightly
+better than, the FP16 baseline (FID~29.60, legibility~90.79\%). In practical terms,
+more than 96\% of the parametric precision is eliminated, yielding a 32$\times$
+reduction in weight storage and a 58$\times$ speed-up in binary operations, all without
+meaningful loss of generative quality.
 
-\textbf{Contributions.} This paper makes the following contributions:
+\textbf{Contributions.} The main contributions of this work are as follows:
 \begin{itemize}
-  \item We present the first evidence that 1-bit diffusion models can be trained
-    entirely from scratch---without any full-precision teacher, knowledge distillation,
-    or pre-trained checkpoint---achieving functional parity with the FP16 baseline.
-    This directly challenges the prevailing assumption, reinforced by
-    BiDM~\cite{bidm2024}, that teacher-guided distillation is a necessary condition for
-    binary diffusion.
-  \item We formalize two principles---\textbf{structural dominance} (preservation of
-    dominant directional weight geometry through centered binarization) and
-    \textbf{topological stability} (sustained manifold integrity via pre-activation
-    ordering)---providing a theoretical explanation for why native binary training
-    succeeds where PTQ severely degrades.
-  \item We design a strict \textbf{W1A16 hardware ablation} that isolates the effect of
-    weight binarization methodology from activation quantization noise, producing the
-    first controlled comparison between PTQ and native training at the 1-bit weight
-    boundary. This experimental design enables clean causal attribution of manifold
-    collapse to the PTQ paradigm rather than to the 1-bit precision itself.
-  \item We introduce the \textbf{Legibility Score}, a per-sample topological commitment
-    metric complementary to FID, and demonstrate its utility in distinguishing
-    distributional quality from per-sample structural validity across FP16, W1A16, and
-    W1A1 regimes.
+  \item We provide, to our knowledge, the first evidence that a 1-bit diffusion model
+    can be trained from scratch---with no full-precision teacher, no knowledge
+    distillation, and no pre-trained starting point---while matching the FP16 baseline
+    in generation quality. This result directly contradicts the position, underscored by
+    BiDM~\cite{bidm2024}, that distillation from a teacher is indispensable for binary
+    diffusion.
+  \item We articulate and formalize two guiding principles---\textbf{structural
+    dominance} (directional weight geometry is preserved through centered binarization)
+    and \textbf{topological stability} (manifold integrity is maintained via
+    pre-activation ordering)---that together explain why native training works at 1-bit
+    where PTQ severely degrades.
+  \item We construct a controlled \textbf{W1A16 hardware ablation} that decouples the
+    effect of weight binarization from activation quantization noise, enabling the first
+    head-to-head comparison of PTQ and native training at the 1-bit boundary. The
+    design lets us attribute observed quality loss specifically to the PTQ methodology,
+    not to the bit-width itself.
+  \item We propose the \textbf{Legibility Score}, a per-sample confidence metric that
+    complements FID by capturing whether each generated image commits to a recognizable
+    class. We show its value for separating distributional fidelity from per-sample
+    structural validity across the FP16, W1A16, and W1A1 precision regimes.
 \end{itemize}
 
 % ============================================================
@@ -175,115 +166,121 @@ binary operations, and eliminates the problem of manifold collapse.
 
 \subsection{Diffusion Models and Edge Deployment}
 
-DDPMs~\cite{ho2020ddpm} define a forward Markov process that gradually corrupts data
-with Gaussian noise over $T$ steps, and learn a reverse denoising network $f_\theta$ to
-reconstruct clean images. The training objective is:
+At a high level, a DDPM~\cite{ho2020ddpm} corrupts training images with Gaussian noise
+over $T$ forward steps and then trains a network $f_\theta$ to reverse this corruption.
+The loss function takes the form:
 \begin{equation}
   \mathcal{L} = \mathbb{E}_{x_0,\varepsilon,t}\!\left[
     \left\|\varepsilon - f_\theta\!\left(\sqrt{\bar\alpha_t}\,x_0 +
     \sqrt{1-\bar\alpha_t}\,\varepsilon,\;t\right)\right\|^2\right]
   \label{eq:ddpm}
 \end{equation}
-where $\bar\alpha_t = \prod_{i=1}^{t}(1-\beta_i)$. Subsequent improvements
-(DDIM~\cite{song2020ddim}, LDM~\cite{rombach2022ldm}, SDXL~\cite{podell2023sdxl}) have
-extended generation quality dramatically, but all share the inference bottleneck of
-hundreds to thousands of sequential network evaluations. Efforts to make diffusion models
-edge-deployable have focused primarily on sampling efficiency (fewer steps via
-distillation~\cite{salimans2022progressive}) or architectural pruning, but these do not
-address the fundamental precision cost of floating-point arithmetic.
+with $\bar\alpha_t = \prod_{i=1}^{t}(1-\beta_i)$. Follow-up work---including
+DDIM~\cite{song2020ddim}, Latent Diffusion~\cite{rombach2022ldm}, and
+SDXL~\cite{podell2023sdxl}---has pushed image quality substantially further, yet every
+variant inherits the same inference bottleneck: hundreds or thousands of sequential
+forward passes through the denoising network. Attempts to bring diffusion models to edge
+devices have largely targeted sampling speed (e.g.\ progressive
+distillation~\cite{salimans2022progressive}) or network pruning, but neither strategy
+tackles the underlying cost of floating-point arithmetic itself.
 
 \subsection{Post-Training Quantization and Its Limits}
 
-Post-Training Quantization (PTQ) compresses a pre-trained model by mapping its
-floating-point parameters to a lower-bit representation without retraining.
-Q-Diffusion~\cite{li2023qdiffusion} and PTQD~\cite{he2023ptqd} demonstrated PTQ of
-diffusion models to 4-bit and 8-bit precision with acceptable quality degradation.
-EfficientDiffusion and TDQ introduced timestep-aware quantization calibration to handle
-the fact that activation distributions in diffusion models shift significantly across
-timesteps, making a single fixed quantization scale suboptimal.
+The idea behind PTQ is straightforward: take an already-trained model and re-map its
+floating-point parameters to a lower bit-width, skipping any retraining.
+Q-Diffusion~\cite{li2023qdiffusion} and PTQD~\cite{he2023ptqd} showed that diffusion
+models can be quantized to 4 or 8 bits with tolerable quality loss. Later methods such
+as EfficientDiffusion and TDQ added timestep-aware calibration, recognizing that
+activation statistics in diffusion networks shift considerably from one denoising step
+to the next and that a single static scale is therefore sub-optimal.
 
-However, PTQ degrades sharply as bit-width decreases. At 1-bit precision, the
-quantization error is so large relative to the weight magnitude that the pre-trained
-solution manifold cannot be preserved. Our empirical results confirm severe degradation
-at 1-bit (FID:~191.94, legibility:~64.92\%) for a W1A16 PTQ model, compared to
-FID~24.24 and 89.45\% legibility for the natively trained equivalent.
+The trouble is that PTQ quality falls off a cliff as bit-width shrinks. At the 1-bit
+extreme, quantization error dwarfs the weight magnitudes, and the pre-trained solution
+surface is effectively destroyed. Our own experiments bear this out: a W1A16 model
+obtained by PTQ records an FID of~191.94 and only~64.92\% legibility, whereas the same
+architecture trained natively under binary constraints achieves FID~24.24 and 89.45\%
+legibility.
 
 \subsection{The 1-Bit Binarization Bottleneck}
 
-Binary Neural Networks
-(BNNs)~\cite{hubara2016bnn,rastegari2016xnornet} constrain weights and activations to
-$\{-1,+1\}$, enabling XNOR-popcount computation. XNOR-Net introduced per-channel scaling
-factors ($\alpha = \text{mean}|W|$) to reduce quantization error. The Straight-Through
-Estimator (STE)~\cite{bengio2013ste} approximates gradients through the
-non-differentiable sign function, allowing BNNs to be trained end-to-end. While BNNs
-have been successfully applied to discriminative tasks (image
-classification~\cite{liu2020reactnet,martinez2020training}), applying them to generative
-models---which must preserve the full geometry of the data distribution rather than
-project to a finite label space---has been largely unexplored.
+In a Binary Neural Network
+(BNN)~\cite{hubara2016bnn,rastegari2016xnornet}, both weights and activations are
+restricted to $\{-1,+1\}$, turning multiply-accumulate arithmetic into XNOR-popcount
+logic. XNOR-Net popularized per-channel scale factors
+($\alpha = \text{mean}|W|$) as a way to narrow the quantization gap, and the
+Straight-Through Estimator (STE)~\cite{bengio2013ste} made it possible to back-propagate
+through the non-differentiable sign function, opening the door to end-to-end training.
+BNNs have proven effective for discriminative tasks such as image
+classification~\cite{liu2020reactnet,martinez2020training}, but generative
+modelling---where the network must faithfully capture the full data distribution instead
+of merely assigning labels---has seen very little exploration at the binary level.
 
-BiDM~\cite{bidm2024} represents the first work to fully binarize a diffusion model
-(W1A1), achieving FID~22.74 on LSUN-Bedrooms $256{\times}256$ through a combination of
-Timestep-friendly Binary Structure (TBS) and Space Patched Distillation (SPD). BiDM
-yields 28.0$\times$ storage reduction and 52.7$\times$ operations savings. Critically,
-BiDM requires a full-precision teacher trained and available for distillation---a
-dependency our work removes entirely.
+The first attempt to fully binarize a diffusion model is
+BiDM~\cite{bidm2024}, which operates at W1A1 precision and reports FID~22.74 on
+LSUN-Bedrooms at $256{\times}256$ resolution. BiDM combines a Timestep-friendly Binary
+Structure (TBS) with Space Patched Distillation (SPD), achieving a 28.0$\times$
+reduction in storage and 52.7$\times$ fewer operations. A key limitation, however, is
+that BiDM depends on a pre-trained full-precision teacher for the distillation
+stage---a dependency that our method eliminates completely.
 
 \subsection{Pre-Activation Residual Networks}
 
-He et al.~\cite{he2016preact} showed that placing batch normalization and activation
-before the convolution (pre-activation ordering: BN $\to$ Act $\to$ Conv) improves
-gradient flow in deep residual networks. In the BNN context, pre-activation ordering has
-additional significance: BatchNorm normalizes the pre-activation distribution to near
-zero mean and unit variance, calibrating inputs to the sign function's decision boundary
-and improving STE effectiveness throughout training.
+He et al.~\cite{he2016preact} demonstrated that moving batch normalization and the
+non-linearity ahead of the convolution (BN $\to$ Act $\to$ Conv) yields better gradient
+propagation in deep residual networks. For BNNs the benefits are even more pronounced:
+because BatchNorm centres and scales the incoming activations to approximately zero mean
+and unit variance, the sign function operates near its decision boundary, which keeps
+the STE gradient well-behaved across training iterations.
 
 % ============================================================
 \section{The Binarization Problem: Compression vs.\ Representation}
 
 \subsection{Mechanics of Manifold Collapse}
 
-A diffusion model's learned denoising function $f_\theta$ implicitly encodes the score
-of the data distribution---the directional gradient $\nabla_x \log p_t(x)$ that steers
-noisy samples toward the data manifold. For a given digit class, this score field
-delineates the manifold boundary in pixel space: it is a high-dimensional directional
-structure encoding both spatial topology (stroke shape) and class membership.
+Inside a trained diffusion model the denoising function $f_\theta$ implicitly represents
+the score of the data distribution---the gradient $\nabla_x \log p_t(x)$ that pulls
+noisy samples back toward clean data. For any particular digit class this score field
+carves out manifold boundaries in pixel space, encoding both stroke geometry and class
+identity in a high-dimensional directional structure.
 
-When PTQ is applied to a pre-trained FP16 model, each floating-point weight
-$w_o \in \mathbb{R}$ is replaced by $\text{sign}(w_o)\cdot\alpha$, where
-$\alpha = \text{mean}|W|$ compensates magnitude. This operation is performed
-layer-by-layer, post-training, without any gradient feedback. Binary quantization erases
-the magnitude ordering entirely, collapsing the score field to an incoherent set of
-binary responses. The reverse diffusion chain then amplifies this incoherence over
-$T=1{,}000$ steps, producing the observed manifold collapse.
+PTQ replaces every floating-point weight $w_o \in \mathbb{R}$ with
+$\text{sign}(w_o)\cdot\alpha$, where the scale
+$\alpha = \text{mean}|W|$ attempts to compensate for the lost magnitude information.
+Because this replacement happens layer by layer after training, with no further gradient
+updates, the fine-grained magnitude ordering that the network relied upon is wiped out.
+What remains is a set of binary responses that no longer form a coherent score field.
+Over the $T=1{,}000$ reverse diffusion steps this incoherence compounds, and the
+manifold collapses.
 
 \subsection{Native Binarization as a Representation Problem}
 
-Native Binarization reframes the problem: rather than compressing a floating-point
-manifold into binary constraints, we ask the network to \emph{discover} a binary manifold
-de novo. A binary weight network trained from scratch under the DDPM objective starts
-from a random binary initialization and discovers, through gradient descent via STE, a
-configuration of $\{-1,+1\}$ weights that minimizes the noise prediction loss. The
-resulting binary weights are not a degraded approximation of floating-point weights---
-they are a natively binary solution to the DDPM objective, encoding the score field in a
-different representational geometry that is nonetheless functionally equivalent.
+Our approach flips the question around. Instead of squeezing a floating-point solution
+into binary constraints, we let the network \emph{find} a binary solution from scratch.
+Starting from random initialization, gradient descent via the STE searches for a
+configuration of $\{-1,+1\}$ weights that directly minimizes the DDPM noise-prediction
+loss. The weights that emerge are not a degraded copy of some floating-point
+original---they are a genuinely binary encoding of the score field, expressed in a
+different representational geometry but functionally equivalent.
 
-The key hypothesis of Native Binarization is that this natively grown binary solution
-exists and is reachable by gradient descent, provided that (1)~the binary approximation
-quality at each step is sufficient to maintain gradient signal (\emph{structural
-dominance}), and (2)~the gradient flow through the sign function is maintained throughout
-training (\emph{topological stability}).
+The central hypothesis is that such a natively binary solution both exists and is
+reachable through standard gradient-based optimization, given two conditions:
+(1)~each binarization step must preserve enough directional information to sustain a
+useful gradient signal (\emph{structural dominance}), and (2)~the gradient path through
+the sign function must remain well-conditioned throughout training (\emph{topological
+stability}).
 
 % ============================================================
 \section{Methodology}
 
 \subsection{Native 1-Bit Diffusion Architecture}
 
-We implement a shallow residual U-Net~\cite{ronneberger2015unet} with channel widths
-$[64, 128, 256]$ and two spatial downsampling stages (MaxPool2d, $\times2$) and
-corresponding upsampling stages (nearest-neighbor, $\times2$). Skip connections are
-implemented via channel concatenation at each resolution level. The model processes
-$28{\times}28$ single-channel MNIST~\cite{lecun1998mnist} images.
-Figure~\ref{fig:arch} shows the overall architecture.
+The backbone is a compact residual U-Net~\cite{ronneberger2015unet} with three channel
+widths---$[64, 128, 256]$---and two rounds of spatial down-sampling (MaxPool2d,
+$\times2$) followed by matching up-sampling stages (nearest-neighbour, $\times2$).
+Feature maps from the encoder are concatenated with their decoder counterparts via skip
+connections at every resolution. All experiments target $28{\times}28$ single-channel
+MNIST~\cite{lecun1998mnist} images; the full topology is depicted in
+Figure~\ref{fig:arch}.
 
 \begin{figure}[t]
 \centering
@@ -353,23 +350,22 @@ BitConv2d\_Std / BitConv2d\_BNN).}
 \label{fig:arch}
 \end{figure}
 
-\textbf{Time Conditioning.} A sinusoidal positional
-embedding~\cite{vaswani2017attention} of dimension 32 is passed through a two-layer MLP
-to produce a time embedding $t_\text{emb} \in \mathbb{R}^{32}$. Within each residual
-block, a learned linear projection adapts $t_\text{emb}$ to the block's channel
-dimension and is broadcast-added to the intermediate feature map, injecting timestep
-context at every resolution level.
+\textbf{Time Conditioning.} Each diffusion step index is encoded with a 32-dimensional
+sinusoidal embedding~\cite{vaswani2017attention} and then fed through a small two-layer
+MLP, producing $t_\text{emb} \in \mathbb{R}^{32}$. Inside every residual block a
+learned linear layer maps $t_\text{emb}$ to the block's channel count and adds it
+element-wise to the feature map, so that timestep information is available at all
+spatial resolutions.
 
-\textbf{Boundary Layer Convention.} The first convolutional layer ($1{\to}64$ channels)
-and the final output layer ($64{\to}1$ channels) are kept in full precision for all
-variants, following the standard BNN convention of preserving interface fidelity at the
-pixel-space boundary.
+\textbf{Boundary Layer Convention.} Following standard BNN practice, the input
+convolution ($1{\to}64$ channels) and the output projection ($64{\to}1$ channels) remain
+in full precision across all model variants. Keeping the pixel-space interface layers at
+higher precision avoids introducing quantization noise at the boundaries of the network.
 
 \subsection{Pre-Activation Block Structure}
 
-All binary residual blocks adopt pre-activation ordering, as illustrated in
-Figure~\ref{fig:block}. Formally, the forward pass through a single binary residual
-block is:
+Every binary residual block follows the pre-activation layout shown in
+Figure~\ref{fig:block}. Written out, a single block computes:
 \begin{align*}
   h &\leftarrow \text{BinaryAct}\!\left(\text{BN}(x)\right) \\
   h &\leftarrow \text{BinaryConv2d}(h) \\
@@ -422,22 +418,23 @@ connection preserves gradient flow to shallow layers.}
 \label{fig:block}
 \end{figure}
 
-\textbf{Topological Stability via Pre-Activation Ordering.} The critical property of
-this ordering is that BatchNorm normalizes activations to approximately zero mean and
-unit variance \emph{before} the sign function evaluates them. This ensures the binary
-decision boundary (at zero) is consistently calibrated throughout training. The
-consequence is that neither systematic dead-neuron effects nor gradient starvation
-through the STE occur. We formalize this as the \textbf{topological stability}
-condition: the network's binary representation remains dynamically balanced enough to
-encode the class-level manifold boundaries of the data distribution, supporting diverse,
-topologically coherent generation.
+\textbf{Topological Stability via Pre-Activation Ordering.} What makes this ordering
+important is that BatchNorm re-centres and re-scales activations \emph{before} they
+reach the sign function.  Because the resulting distribution sits close to zero mean
+with unit variance, the binary decision boundary stays well-calibrated at every
+training iteration. Dead neurons and gradient starvation---two common failure modes when
+sign functions are involved---are effectively avoided. We refer to this property as
+\textbf{topological stability}: the binary representation stays dynamically balanced
+enough to capture the class-level manifold boundaries of the data distribution,
+sustaining diverse and structurally coherent generation.
 
 \subsection{Mean-Centered Weight Binarization (Structural Dominance)}
 
-For the W1A16 model, we use \texttt{BitConv2d\_Std}---a weight-binarizing convolution
-with mean centering. Let $W \in \mathbb{R}^{C_\text{out} \times C_\text{in} \times k
-\times k}$ be a convolutional weight tensor, and $w_o \in \mathbb{R}^{C_\text{in}k^2}$
-the flattened kernel for output channel $o$.
+Weight binarization in the W1A16 variant is handled by \texttt{BitConv2d\_Std}, a
+convolution layer that subtracts the per-filter mean before applying the sign function.
+Given a weight tensor $W \in \mathbb{R}^{C_\text{out} \times C_\text{in} \times k
+\times k}$, let $w_o \in \mathbb{R}^{C_\text{in}k^2}$ denote the flattened kernel for
+output channel $o$.
 
 \textbf{Standard (uncentered) binarization:}
 \begin{equation}
@@ -461,21 +458,24 @@ the flattened kernel for output channel $o$.
   \label{eq:cen-bin}
 \end{equation}
 
-\textbf{Structural Dominance Property.} Centering removes the isotropic DC component
-$\mu_o$ from the weight vector, isolating its directional structure. The sign function
-then binarizes this direction, and $\bar\alpha_o$ recovers a magnitude proxy. The
-resulting binary filter $\hat{w}_o$ is \emph{dominated by the structural direction} of
-$w_o$: the mean-centering step reduces the angular error introduced by binarization,
-because the sign of a zero-mean vector is more sensitive to the true directional
-distribution of its components than the sign of a vector with a strong DC offset. This
-is particularly significant in diffusion networks, where convolutional filters must
-encode directional denoising responses to approximate the score field.
+\textbf{Structural Dominance Property.} By subtracting $\mu_o$, the isotropic DC
+component is stripped from the weight vector, leaving only its directional content
+exposed. Applying the sign function then quantizes this purified direction, while
+$\bar\alpha_o$ serves as a magnitude proxy that rescales the result. The key effect is
+that $\hat{w}_o$ inherits the \emph{dominant directional structure} of the original
+filter $w_o$: because a zero-mean vector's sign pattern faithfully reflects how its
+entries are distributed across directions---unlike a vector biased by a large DC
+offset---centering substantially shrinks the angular distortion that binarization
+introduces. This property matters especially in diffusion networks, whose convolutional
+kernels must capture oriented denoising responses in order to approximate the score
+field accurately.
 
 \subsection{Gradient Approximation via Straight-Through Estimator}
 
-The sign function in both weight and activation binarization is non-differentiable. We
-use the \textbf{Straight-Through Estimator}
-(STE)~\cite{bengio2013ste} to pass gradients through the binarization step.
+Both weight and activation binarization rely on the sign function, which has zero
+derivative almost everywhere. To enable backpropagation through this hard threshold we
+adopt the \textbf{Straight-Through Estimator}
+(STE)~\cite{bengio2013ste}.
 
 \textbf{Weight STE (\texttt{BitConv2d\_Std} and \texttt{BitConv2d\_BNN}):}
 \begin{equation}
@@ -491,17 +491,17 @@ use the \textbf{Straight-Through Estimator}
   \label{eq:ste-a}
 \end{equation}
 
-The clipped STE~\cite{courbariaux2016clippedste} zeros gradients for inputs with
-$|x|>1$, preventing instability from outlier activations while maintaining gradient
-flow in the central region.
+Under the clipped variant~\cite{courbariaux2016clippedste}, gradients are set to zero
+whenever $|x|>1$. This suppresses the destabilising influence of outlier activations
+while keeping gradient information flowing through the bulk of the distribution.
 
 % ============================================================
 \section{Experimental Setup}
 
 \subsection{Model Architectures and Initialization}
 
-We evaluate three model variants sharing the same U-Net topology, summarized in
-Table~\ref{tab:variants}.
+Three model variants, all built on an identical U-Net backbone, are evaluated in our
+experiments. Their configurations are summarized in Table~\ref{tab:variants}.
 
 \begin{table}[h]
 \centering
@@ -519,22 +519,23 @@ ResUNet\_W1A1  & 1-bit, uncentered & 1-bit (clip.\ STE) & BitConv2d\_BNN \\
 \end{tabular}
 \end{table}
 
-All models are initialized with PyTorch default initialization. All experiments use the
-standard DDPM training objective with a linear noise schedule $\beta \in
-[10^{-4},\,0.02]$ over $T=1{,}000$ timesteps. Training uses
-Adam (lr $=10^{-3}$) for FP16 and W1A16, and
-AdamW~\cite{loshchilov2019adamw} (lr $=10^{-4}$) for W1A1, each for 100 epochs on the
-MNIST training set (60{,}000 images, $28{\times}28$ grayscale, normalized to $[-1,1]$).
-Batch size is 16 for all variants. The time MLP uses ReLU activation for FP16 and
-W1A16, and GELU for W1A1. All reported metrics are averaged over three independent
-evaluation runs to ensure reproducibility.
+Every model starts from PyTorch's default initialization. We train with the standard
+DDPM objective under a linear noise schedule $\beta \in [10^{-4},\,0.02]$ spanning
+$T=1{,}000$ diffusion steps. The FP16 and W1A16 variants are optimized with
+Adam (lr $=10^{-3}$), while W1A1 uses
+AdamW~\cite{loshchilov2019adamw} (lr $=10^{-4}$). All three are trained for 100 epochs
+on the full MNIST training split (60{,}000 images, $28{\times}28$ grayscale, normalized
+to $[-1,1]$) with a batch size of 16. The time-embedding MLP employs ReLU for FP16 and
+W1A16 and GELU for W1A1. To ensure reproducibility, every reported metric is the mean
+of three independent evaluation runs.
 
 \subsection{The W1A16 Isolation Strategy}
 
-The core experimental contribution of this work is a \textbf{strict hardware ablation}
-that fixes activation precision at FP16 while varying only the weight binarization
-strategy. This isolates the effect of the binarization methodology (PTQ vs.\ native)
-from confounding sources such as activation quantization noise. We compare:
+Central to our experimental design is a \textbf{strict hardware ablation} in which
+activation precision is held fixed at FP16 and only the weight binarization strategy
+differs. By doing so, we decouple the binarization methodology (PTQ versus native) from
+confounds introduced by activation quantization noise. The two variants under comparison
+are:
 
 \begin{itemize}
   \item \textbf{ResUNet\_W1A16 (Native):} Trained from scratch with
@@ -544,17 +545,17 @@ from confounding sources such as activation quantization noise. We compare:
     preserved; only the convolutional weights are binarized.
 \end{itemize}
 
-This ablation allows a clean causal claim: any observed difference in generation quality
-between the two variants is attributable solely to the training methodology---native
-vs.\ post-training binarization---and not to activation precision.
+Because activation precision is identical in both settings, any gap in generation quality
+can be attributed directly to the training methodology---native versus post-training
+binarization---rather than to differences in activation representation.
 
 \subsection{Evaluation Metrics}
 
-\textbf{Fr\'echet Inception Distance (FID).} FID~\cite{heusel2017fid} measures the
-distance between the multivariate Gaussians fitted to InceptionV3 features of
-$N=2{,}000$ generated samples and the MNIST test set. Images are upsampled from
-$28{\times}28$ to $299{\times}299$ via bilinear interpolation and replicated to 3
-channels prior to feature extraction:
+\textbf{Fr\'echet Inception Distance (FID).} We adopt FID~\cite{heusel2017fid}, which
+quantifies the distance between two multivariate Gaussians fit to InceptionV3 features---one
+from $N=2{,}000$ generated samples, the other from the MNIST test set. Before feature
+extraction, all images are bilinearly upsampled from $28{\times}28$ to $299{\times}299$
+and replicated across 3 channels:
 \begin{equation}
   \text{FID} = \|\mu_r - \mu_g\|^2 +
   \operatorname{Tr}\!\left(\Sigma_r + \Sigma_g -
@@ -562,24 +563,24 @@ channels prior to feature extraction:
   \label{eq:fid}
 \end{equation}
 
-\textbf{Legibility Score.} We propose a task-specific metric for evaluating topological
-stability: the mean maximum classifier confidence of $N=1{,}000$ generated samples under
-a held-out MNISTClassifier trained independently on real MNIST data:
+\textbf{Legibility Score.} As a task-specific probe for topological stability, we
+introduce the Legibility Score: the average peak softmax confidence over $N=1{,}000$
+generated images, evaluated by an MNISTClassifier trained separately on real data:
 \begin{equation}
   \text{Legibility} = \frac{1}{N}\sum_{i=1}^{N}
   \max_{k\in\{0,\ldots,9\}} P\!\left(k \mid x_i^{\text{gen}}\right)
   \label{eq:legibility}
 \end{equation}
-A score near 1.0 indicates topologically committed digit generation; a score near 0.10
-(random chance) indicates manifold collapse.
+Values close to 1.0 signal that the generator produces digits with strong class
+commitment, whereas values around 0.10 (uniform chance) indicate manifold collapse.
 
 % ============================================================
 \section{Results and Analysis}
 
 \subsection{Quantitative Parity and Topological Stability}
 
-Table~\ref{tab:main} reports the main quantitative results for the W1A16 hardware
-ablation.
+The principal quantitative findings from the W1A16 hardware ablation appear in
+Table~\ref{tab:main}.
 
 \begin{table}[h]
 \centering
@@ -600,16 +601,17 @@ ResUNet\_W1A1  & PTQ               & $223.00 \pm 1.89$ & $63.04 \pm 0.74$\% \\
 \end{tabular}
 \end{table}
 
-The results are decisive. The natively trained W1A16 model achieves FID~24.24 and
-legibility~89.45\%---not only matching but slightly \emph{surpassing} the FP16 baseline
-(FID~29.60, legibility~90.79\%). This demonstrates that the binary weight manifold
-discovered through native training is at least as expressive as the full-precision
-solution for MNIST generation. The PTQ baseline, by contrast, degrades severely:
-FID~191.94 ($7.9\times$ worse than native) and legibility drops to 64.92\%, confirming
-that post-hoc binarization disrupts the learned score field even though some residual
-structure survives. At the fully binary W1A1 level, native training achieves FID~83.98
-and 81.02\% legibility, while PTQ deteriorates further to FID~223.00 and 63.04\%
-legibility. Figure~\ref{fig:chart} visualises the W1A16 gap.
+The outcome is unambiguous. With native training, the W1A16 model records FID~24.24 and
+legibility~89.45\%, which not only matches but marginally \emph{exceeds} the FP16
+baseline (FID~29.60, legibility~90.79\%). This indicates that the binary weight manifold
+found through from-scratch training is no less expressive than its full-precision
+counterpart on MNIST generation. PTQ, on the other hand, suffers a dramatic decline:
+FID~191.94 ($7.9\times$ higher than the native model) with legibility falling to
+64.92\%---evidence that retroactive binarization disrupts the learned score field,
+although a degree of residual structure persists. Moving to the fully binary W1A1
+regime, native training yields FID~83.98 and 81.02\% legibility, whereas PTQ decays
+further to FID~223.00 and 63.04\% legibility. The W1A16 contrast is visualised in
+Figure~\ref{fig:chart}.
 
 \begin{figure}[h]
 \centering
@@ -648,24 +650,24 @@ legibility. Figure~\ref{fig:chart} visualises the W1A16 gap.
 \end{axis}
 \end{tikzpicture}
 \caption{FID (lower is better, blue) and Legibility \% (higher is better, orange) for
-the two W1A16 variants. Native Binarization achieves dramatically lower FID (24.24
-vs.\ 191.94) and higher legibility (89.45\% vs.\ 64.92\%) than PTQ. Results averaged
-over three independent runs.}
+the two W1A16 strategies. The native model attains markedly lower FID (24.24 vs.\
+191.94) and higher legibility (89.45\% vs.\ 64.92\%) compared with PTQ. All values are
+means across three independent runs.}
 \label{fig:chart}
 \end{figure}
 
 \subsection{Visual Evidence of Quality Degradation}
 
-Figures~\ref{fig:fp16}--\ref{fig:compare3way} provide direct visual evidence for the
-quantitative claims.
+Figures~\ref{fig:fp16}--\ref{fig:compare3way} supply visual corroboration of the
+numerical results.
 
 \begin{figure}[t]
   \centering
   \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/fp16_1.png}}\hfill
   \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/fp16_2.png}}
-  \caption{ResUNet\_FP16 (full-precision baseline). Digits are sharp, diverse, and
-  topologically committed to distinct classes. Reference quality ceiling for all
-  compressed variants.}
+  \caption{ResUNet\_FP16 (full-precision baseline). Generated digits are crisp, varied,
+  and clearly committed to individual classes---establishing the quality ceiling against
+  which all compressed variants are compared.}
   \label{fig:fp16}
 \end{figure}
 
@@ -674,18 +676,18 @@ quantitative claims.
   \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a16_our_output_1.png}}\hfill
   \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a16_our_output_2.png}}
   \caption{Natively trained ResUNet\_W1A16 (\textbf{structural dominance}: centered
-  1-bit weights, FP16 activations). Digit structure and class diversity are visually
-  preserved, consistent with FID 24.24 and 89.45\% legibility.}
+  1-bit weights, FP16 activations). Both digit structure and class diversity remain
+  visually intact, in line with the measured FID of 24.24 and 89.45\% legibility.}
   \label{fig:w1a16nat}
 \end{figure}
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.45\columnwidth]{../assets/w1a16_quantized_1.png}
-  \caption{PTQ ResUNet\_W1A16 (FP16 model post-hoc binarized). Outputs show
-  significant structural degradation and reduced clarity, consistent with
-  FID~191.94 and 64.92\% legibility---substantially worse than native training
-  despite retaining some residual digit structure.}
+  \caption{PTQ ResUNet\_W1A16 (FP16 model binarized after training). Outputs exhibit
+  pronounced structural degradation and diminished clarity, matching the measured
+  FID of 191.94 and 64.92\% legibility---far below the native model, though some
+  residual digit structure persists.}
   \label{fig:w1a16ptq}
 \end{figure}
 
@@ -693,19 +695,19 @@ quantitative claims.
   \centering
   \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a1_our_output_1.png}}\hfill
   \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a1_our_output_2.png}}
-  \caption{Natively trained ResUNet\_W1A1 (full 1-bit: binary weights and binary
-  activations, pre-activation ordering with clipped STE). Despite all-binary computation,
-  digit topology is broadly preserved, confirming \textbf{topological stability} extends
-  to the fully binary regime.}
+  \caption{Natively trained ResUNet\_W1A1 (fully 1-bit: binary weights and binary
+  activations, pre-activation ordering with clipped STE). Even under all-binary
+  computation, digit topology is largely maintained---confirming that
+  \textbf{topological stability} carries over to the fully binary setting.}
   \label{fig:w1a1nat}
 \end{figure}
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.45\columnwidth]{../assets/w1a1_quantized_1.png}
-  \caption{PTQ ResUNet\_W1A1 (FP16 model fully binarized: both weights and activations).
-  Binarizing activations compounds the weight quantization error, resulting in further
-  structural degradation relative to PTQ W1A16 (Fig.~\ref{fig:w1a16ptq}).}
+  \caption{PTQ ResUNet\_W1A1 (FP16 model fully binarized in both weights and activations).
+  Activation binarization compounds the weight quantization error, producing additional
+  structural degradation beyond that of PTQ W1A16 (Fig.~\ref{fig:w1a16ptq}).}
   \label{fig:w1a1ptq}
 \end{figure}
 
@@ -714,32 +716,35 @@ quantitative claims.
   \subfloat[FP16]{\includegraphics[width=0.22\columnwidth]{../assets/fp16_1.png}}\hfill
   \subfloat[W1A16 Native]{\includegraphics[width=0.22\columnwidth]{../assets/w1a16_our_output_1.png}}\hfill
   \subfloat[W1A1 Native]{\includegraphics[width=0.22\columnwidth]{../assets/w1a1_our_output_1.png}}
-  \caption{Three-way comparison. The progressive quality gradient is consistent with the
-  information-theoretic cost of successive quantization: W1A16 native maintains
-  near-baseline fidelity; W1A1 native introduces characteristic smoothing consistent
-  with the reduced representational bandwidth of fully binary activations.}
+  \caption{Three-way visual comparison. Quality degrades progressively, in keeping with
+  the information-theoretic penalty of deeper quantization: the W1A16 native model
+  preserves near-baseline fidelity, while W1A1 native exhibits the characteristic
+  softening expected from the narrower representational bandwidth of fully binary
+  activations.}
   \label{fig:compare3way}
 \end{figure}
 
 \subsection{Hardware Efficiency Gains}
 
-The W1A16 model achieves the following theoretical hardware improvements relative to
-ResUNet\_FP16:
+Relative to ResUNet\_FP16, the W1A16 model offers the following theoretical hardware
+advantages:
 
 \begin{itemize}
-  \item \textbf{Memory:} Binarized convolutional weights occupy 1~bit per parameter
-    vs.\ 32~bits in standard FP32 storage---a \textbf{32$\times$ memory reduction} for
-    the binarized layers (16$\times$ if compared against FP16 inference weights).
-  \item \textbf{Arithmetic:} Binary weight multiplication collapses to a sign operation,
-    equivalent to an XNOR-popcount operation---a \textbf{58$\times$ reduction in binary
-    operations} relative to FP16 MAC count (BOPs vs.\ FLOPs).
-  \item \textbf{Energy:} Binary operations on dedicated hardware consume approximately
-    1--2 orders of magnitude less energy than floating-point equivalents.
+  \item \textbf{Memory:} Each binarized convolutional weight requires only 1~bit,
+    compared with 32~bits under FP32 storage---yielding a \textbf{32$\times$ memory
+    reduction} across the binarized layers (16$\times$ relative to FP16 inference
+    weights).
+  \item \textbf{Arithmetic:} Multiplication with a binary weight reduces to a sign
+    flip, implementable as an XNOR-popcount operation---a \textbf{58$\times$ reduction
+    in binary operations} when measured against the FP16 MAC count (BOPs vs.\ FLOPs).
+  \item \textbf{Energy:} On dedicated binary-arithmetic hardware, such operations
+    draw roughly 1--2 orders of magnitude less energy than their floating-point
+    counterparts.
 \end{itemize}
 
-These efficiency gains are realized at \textbf{zero cost to semantic utility}: the
-89.45\% legibility (vs.\ 90.79\% for FP16) confirms that the compressed model generates
-images that are semantically equivalent---at the digit-class level---to the
+Crucially, these savings come at \textbf{no measurable cost to semantic utility}: with
+89.45\% legibility (compared to 90.79\% for FP16), the compressed model produces images
+that are, at the digit-class level, semantically indistinguishable from those of the
 full-precision baseline.
 
 % ============================================================
@@ -747,90 +752,95 @@ full-precision baseline.
 
 \subsection{Why PTQ Fails at 1-Bit}
 
-The severe degradation of PTQ at the 1-bit boundary has a clear mechanistic
-explanation rooted in the structural dominance framework. A trained FP16 diffusion model
-encodes the score function in the relative magnitudes and signs of its weights. Binary
-quantization erases the magnitude ordering, retaining only the signs. In a converged
-FP16 model, the signs of individual weights carry almost no independent semantic
-meaning---meaning is encoded in the full magnitude-weighted interaction of the entire
-filter. Post-hoc sign extraction destroys this structure entirely.
+The structural dominance framework offers a clear mechanistic account of why PTQ
+collapses at the 1-bit boundary. In a trained FP16 diffusion model, the score function
+is encoded through the relative magnitudes and signs of filter weights together. Binary
+quantization discards the entire magnitude ordering and keeps only the signs. Within a
+converged FP16 network, however, individual weight signs carry negligible standalone
+semantic content---information resides in the full magnitude-weighted interplay across
+the filter. Extracting signs post-hoc therefore obliterates this encoding.
 
-Furthermore, the FP16 and binary training landscapes are disjoint: the saddle points and
-minima of the DDPM loss under binary constraints are not near the FP16 optima. PTQ
-places the binary model at the binary image of an FP16 optimum---a point that is not an
-optimum, not even a stationary point, of the binary loss landscape. The native binary
-training procedure, by contrast, navigates the binary loss landscape from initialization,
-finding configurations of $\{-1,+1\}$ weights that are actual optima of the DDPM
-objective under binary constraints.
+A second, complementary explanation is landscape-theoretic. The loss surfaces of the
+DDPM objective under binary constraints and under full-precision parameterisation occupy
+largely disjoint regions: the saddle points and minima reachable by $\{-1,+1\}$ weights
+do not coincide with those of the FP16 model. PTQ projects the FP16 optimum onto the
+binary parameter space, landing at a point that is neither optimal nor even stationary
+under the binary loss. Native training, by contrast, explores the binary landscape from
+the outset and converges to $\{-1,+1\}$ weight configurations that are genuine optima
+of the DDPM objective within the binary constraint set.
 
 \subsection{Structural Dominance vs.\ BiDM's Distillation}
 
-BiDM~\cite{bidm2024} achieves FID 22.74 on LSUN-Bedrooms $256{\times}256$ at full W1A1
-precision through Timestep-friendly Binary Structure (TBS) and Space Patched Distillation
-(SPD). BiDM's approach is \emph{distillation-dependent} and teacher-bound: the binary
-model is constrained to approximate the full-precision teacher's outputs. This creates a
-hard dependency chain---the binary model cannot exist without first training the
-full-precision model it distills from. Native Binarization is \emph{teacher-free} and
-allows the binary network to discover its own binary solution geometry.
+BiDM~\cite{bidm2024} reports FID 22.74 on LSUN-Bedrooms $256{\times}256$ at W1A1
+precision, relying on Timestep-friendly Binary Structure (TBS) together with Space
+Patched Distillation (SPD). Their pipeline is inherently \emph{distillation-dependent}:
+the binary student is trained to mimic the outputs of a full-precision teacher, creating
+a hard dependency chain in which the binary model cannot be obtained without first
+training the teacher it distils from. Native Binarization, in contrast, is
+\emph{teacher-free}---the binary network discovers its own solution geometry
+independently.
 
-This distinction has significant practical implications. In domains where pre-trained
-diffusion models are unavailable (custom medical imaging, proprietary datasets, novel
-modalities), prohibitively expensive to train at full precision, or encumbered by
-licensing restrictions, distillation-based approaches are inapplicable. Native
-Binarization removes this dependency entirely: the binary model is the only model that
-needs to be trained, reducing total training cost and eliminating the teacher storage
-overhead.
+The practical ramifications of this difference are substantial. Whenever pre-trained
+diffusion models are unavailable---as with custom medical imaging pipelines, proprietary
+datasets, or entirely novel modalities---or when full-precision training is prohibitively
+expensive or restricted by licensing, distillation-based routes become infeasible. Native
+Binarization sidesteps this dependency altogether: only a single binary model needs to be
+trained, cutting aggregate training cost and removing the storage burden of a teacher
+checkpoint.
 
-The structural dominance principle---centered weight binarization as a mechanism for
-preserving directional filter structure---is architecturally complementary to BiDM's TBS
-and could in principle be integrated with it, potentially improving per-timestep binary
-weight quality within the learnable binarizer framework.
+It is worth noting that the structural dominance principle---using centered weight
+binarization to retain directional filter structure---is architecturally orthogonal to
+BiDM's TBS and could, in principle, be incorporated into their learnable binarizer
+framework to improve per-timestep binary weight fidelity.
 
 \subsection{Topological Stability as a Generative Metric}
 
-The Legibility Score provides information distinct from FID. FID measures distributional
-similarity in feature space, rewarding both diversity and perceptual quality but being
-insensitive to per-sample topological commitment. A model that generates highly varied
-but structurally ambiguous outputs may achieve moderate FID while scoring low on
-Legibility. The combination of FID and Legibility is therefore more informative: FID
-measures whether the generator covers the full data distribution, while Legibility
-measures whether individual generated samples are topologically valid members of that
-distribution.
+Legibility captures an aspect of generation quality that FID alone does not. FID rewards
+both diversity and perceptual fidelity in feature space, yet it is blind to whether any
+single sample is topologically committed to a particular class. A generator that produces
+highly varied but structurally ambiguous digits could attain a moderate FID yet score
+poorly on Legibility. Reporting both metrics together is therefore more revealing: FID
+gauges how well the generator spans the full data distribution, while Legibility tests
+whether each individual sample is a topologically coherent member of that distribution.
 
 \subsection{Limitations}
 
-This work demonstrates Native Binarization on MNIST. Extension to higher-resolution
-datasets (CIFAR-10, CelebA, LSUN-Bedrooms) is future work. The Legibility Score requires
-a task-specific classifier and is not directly generalizable to continuous-domain
-generation. Practical realization of the 58$\times$ operational speedup requires
-dedicated XNOR-popcount CUDA or FPGA kernels; our current implementation uses standard
-PyTorch convolutions with binary-valued weights.
+Our experiments are limited to MNIST; scaling Native Binarization to higher-resolution
+benchmarks such as CIFAR-10, CelebA, or LSUN-Bedrooms remains future work. The
+Legibility Score depends on a task-specific classifier and does not transfer directly to
+continuous-domain generation tasks. Additionally, the 58$\times$ operational speedup is
+theoretical: realising it in practice demands specialised XNOR-popcount CUDA or FPGA
+kernels, whereas our current code relies on standard PyTorch convolutions operating on
+binary-valued weight tensors.
 
 % ============================================================
 \section{Conclusion}
 
-We have presented \textbf{Native Binarization}, a training framework for 1-bit diffusion
-models grounded in two formally defined principles: \textbf{structural dominance} via
-mean-centered weight binarization, and \textbf{topological stability} via pre-activation
-residual ordering. Through a rigorous W1A16 hardware ablation, we demonstrated that the
-severe quality degradation (FID:~191.94, legibility:~64.92\%) observed under standard
-PTQ is not an inherent property of the 1-bit hardware boundary, but a consequence of the
-Train-then-Quantize paradigm.
+This paper introduced \textbf{Native Binarization}, a training framework for 1-bit
+diffusion models built on two formally motivated principles: \textbf{structural
+dominance} through mean-centered weight binarization, and \textbf{topological stability}
+through pre-activation residual ordering. A controlled W1A16 hardware ablation revealed
+that the sharp quality loss under standard PTQ (FID:~191.94, legibility:~64.92\%) is not
+an intrinsic limitation of the 1-bit hardware boundary itself, but rather an artefact of
+the Train-then-Quantize paradigm.
 
-Our natively trained W1A16 binary diffusion model achieves FID~24.24 and 89.45\%
-legibility---functional parity with the FP16 baseline (FID~29.60)---at a 32$\times$ memory
-reduction and 58$\times$ computational speedup, with no knowledge distillation from a
-full-precision teacher. These results establish that 1-bit diffusion manifolds are
-structurally sound when grown natively, and that the structural dominance property of
-centered weight binarization provides the necessary inductive bias for stable binary
-learning.
+The natively trained W1A16 binary diffusion model achieves FID~24.24 and 89.45\%
+legibility---effectively on par with the FP16 baseline (FID~29.60)---while delivering a
+32$\times$ memory reduction and 58$\times$ computational speedup, all without
+distilling knowledge from a full-precision teacher. These findings demonstrate that
+1-bit diffusion manifolds are structurally viable when cultivated from scratch, and that
+the structural dominance property of centered binarization supplies the inductive bias
+needed for stable binary training.
 
-We believe Native Binarization opens a practical path toward teacher-free deployment of
-extremely compressed diffusion models on resource-constrained edge hardware. The
-structural dominance and topological stability principles introduced here are broadly
-applicable and may extend to other generative architectures---flow matching models,
-consistency models, and masked diffusion---wherever 1-bit compression is sought without
-the overhead of full-precision teacher training.
+We see Native Binarization as a concrete step toward teacher-free deployment of
+aggressively compressed diffusion models on resource-limited edge devices. The structural
+dominance and topological stability principles presented here are not architecture-specific
+and may generalise to other generative families---flow matching models, consistency
+models, and masked diffusion---wherever extreme 1-bit compression is desired without the
+cost of maintaining a full-precision teacher.
+
+\smallskip\noindent\textbf{Code Availability.} Source code and trained checkpoints are
+publicly available at \url{https://github.com/nihal-gazi/Native-Binarization}.
 
 % ============================================================
 \bibliographystyle{IEEEtran}
