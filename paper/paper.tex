@@ -1,7 +1,6 @@
 
 \documentclass[twocolumn, journal]{IEEEtran}
 
-% ---- Core packages ----
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
@@ -11,22 +10,13 @@
 \usepackage{booktabs}
 \usepackage{microtype}
 \usepackage{url}
-
-% ---- TikZ & PGFPlots (for diagrams) ----
 \usepackage{tikz}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc}
-
-% ---- Figure sub-panels ----
 \usepackage{subfig}
-
-% titlesec removed — IEEEtran handles section headings natively in twocolumn mode
-
-% ---- Hyperlinks (load last) ----
 \usepackage[hidelinks]{hyperref}
 
-% ============================================================
 \begin{document}
 
 \title{One Bit is All You Need to Diffuse}
@@ -48,7 +38,6 @@
 
 \maketitle
 
-% ============================================================
 \begin{abstract}
 The memory footprint and arithmetic cost of floating-point operations remain the
 principal obstacles to running generative diffusion models on edge hardware. Reducing
@@ -77,7 +66,6 @@ entirely from scratch can match full-precision generation quality.
 \noindent\textbf{Keywords:} 1-Bit Quantization, Diffusion Models, Generative AI, Model Compression, Topology,
 ResUNet, Edge AI, Structural Dominance, Binary Neural Networks
 
-% ============================================================
 \section{Introduction}
 
 Denoising diffusion models have rapidly become one of the most capable families of
@@ -151,7 +139,7 @@ meaningful loss of generative quality.
     structural validity across the FP16, W1A16, and W1A1 precision regimes.
 \end{itemize}
 
-% ============================================================
+
 \section{Related Work}
 
 \subsection{Diffusion Models and Edge Deployment}
@@ -222,7 +210,6 @@ because BatchNorm centres and scales the incoming activations to approximately z
 and unit variance, the sign function operates near its decision boundary, which keeps
 the STE gradient well-behaved across training iterations.
 
-% ============================================================
 \section{The Binarization Problem: Compression vs.\ Representation}
 
 \subsection{Mechanics of Manifold Collapse}
@@ -259,7 +246,7 @@ useful gradient signal (\emph{structural dominance}), and (2)~the gradient path 
 the sign function must remain well-conditioned throughout training (\emph{topological
 stability}).
 
-% ============================================================
+
 \section{Methodology}
 
 \subsection{Native 1-Bit Diffusion Architecture}
@@ -274,7 +261,6 @@ Figure~\ref{fig:arch}.
 
 \begin{figure}[t]
 \centering
-% ---- TikZ: U-Net Architecture Diagram ----
 \begin{tikzpicture}[
     font=\footnotesize,
     block/.style={rectangle, rounded corners=2pt, draw=black!70,
@@ -289,7 +275,7 @@ Figure~\ref{fig:arch}.
     node distance=0.24cm and 0.9cm
   ]
 
-  % ---- Encoder (left column, top to bottom) ----
+
   \node[block=blue!15]                   (in)  {Conv\,1$\!\to\!$64};
   \node[block=blue!20, below=of in]      (e1)  {ResBlock\,64};
   \node[block=blue!25, below=of e1]      (d1)  {Down\,$\times$2};
@@ -297,37 +283,29 @@ Figure~\ref{fig:arch}.
   \node[block=blue!35, below=of e2]      (d2)  {Down\,$\times$2};
   \node[block=blue!45, below=of d2]      (bot) {ResBlock\,256};
 
-  % ---- Decoder (right column, aligned with encoder) ----
   \node[block=orange!15, right=0.9cm of in]  (out) {Conv\,64$\!\to\!$1};
   \node[block=orange!20, below=of out]       (de1) {ResBlock\,64};
   \node[block=orange!25, below=of de1]       (u1)  {Up\,$\times$2};
   \node[block=orange!30, below=of u1]        (de2) {ResBlock\,128};
   \node[block=orange!35, below=of de2]       (u2)  {Up\,$\times$2};
-  % u2 connects to bot at bottom — handled by arrow
 
-  % ---- Time Embedding (centered below bottleneck, clear of all nodes) ----
+
   \node[temb, below=0.55cm of bot] (te)
         {Sinusoidal Emb.\,$\to$\,MLP};
 
-  % ---- Main encoder flow (top→bottom) ----
   \foreach \a/\b in {in/e1, e1/d1, d1/e2, e2/d2, d2/bot}
     \draw[arr] (\a) -- (\b);
 
-  % ---- Bottleneck → first decoder block ----
-  % Route: right along bot's y-level (below all decoder nodes), then up into u2.south
   \draw[arr] (bot.east) -| (u2.south);
 
-  % ---- Decoder flow (bottom→top) ----
   \foreach \a/\b in {u2/de2, de2/u1, u1/de1, de1/out}
     \draw[arr] (\a) -- (\b);
 
-  % ---- Skip connections ----
   \draw[skip] (e1.east)  -| ++(0.2, 0) |- (de1.west)
         node[pos=0.25, above, gray!80, font=\tiny]{cat};
   \draw[skip] (e2.east)  -| ++(0.2, 0) |- (de2.west)
         node[pos=0.25, above, gray!80, font=\tiny]{cat};
 
-  % ---- Time embed arrow (injected at every block via learned projection) ----
   \draw[garr] (te.north) -- (bot.south)
         node[midway, right, font=\tiny, green!60!black]{every block};
 
@@ -370,7 +348,7 @@ identity otherwise.
 
 \begin{figure}[t]
 \centering
-% ---- TikZ: Pre-Activation Block ----
+
 \begin{tikzpicture}[
     font=\small,
     op/.style={rectangle, rounded corners=3pt, draw=black!70,
@@ -391,12 +369,10 @@ identity otherwise.
   \node[op=cyan!25,   below=of ba2](bc2) {BinaryConv2d};
   \node[op=gray!15,   below=of bc2](out) {Output};
 
-  % main flow
   \foreach \a/\b in {x/bn1, bn1/ba1, ba1/bc1, bc1/te,
                      te/bn2, bn2/ba2, ba2/bc2, bc2/out}
     \draw[arr] (\a) -- (\b);
 
-  % skip
   \draw[skip] (x.east) -- ++(1.1,0) |- (out.east)
     node[pos=0.25, right, font=\footnotesize, gray]{skip};
 
@@ -485,7 +461,6 @@ Under the clipped variant~\cite{courbariaux2016clippedste}, gradients are set to
 whenever $|x|>1$. This suppresses the destabilising influence of outlier activations
 while keeping gradient information flowing through the bulk of the distribution.
 
-% ============================================================
 \section{Experimental Setup}
 
 \subsection{Model Architectures and Initialization}
@@ -564,7 +539,6 @@ generated images, evaluated by an MNISTClassifier trained separately on real dat
 Values close to 1.0 signal that the generator produces digits with strong class
 commitment, whereas values around 0.10 (uniform chance) indicate manifold collapse.
 
-% ============================================================
 \section{Results and Analysis}
 
 \subsection{Quantitative Parity and Topological Stability}
@@ -605,7 +579,6 @@ Figure~\ref{fig:chart}.
 
 \begin{figure}[h]
 \centering
-% ---- PGFPlots: FID and Legibility bar chart ----
 \begin{tikzpicture}
 \begin{axis}[
     ybar,
@@ -628,12 +601,12 @@ Figure~\ref{fig:chart}.
     clip=false,
     title style={font=\footnotesize\bfseries},
 ]
-% FID bars
+
 \addplot[fill=blue!45, draw=blue!60]
   coordinates {(W1A16 Native, 24.24) (W1A16 PTQ, 191.94)};
 \addlegendentry{FID $\downarrow$};
 
-% Legibility bars
+
 \addplot[fill=orange!55, draw=orange!70]
   coordinates {(W1A16 Native, 89.45) (W1A16 PTQ, 64.92)};
 \addlegendentry{Legibility \% $\uparrow$};
@@ -737,7 +710,6 @@ Crucially, these savings come at \textbf{no measurable cost to semantic utility}
 that are, at the digit-class level, semantically indistinguishable from those of the
 full-precision baseline.
 
-% ============================================================
 \section{Discussion}
 
 \subsection{Why PTQ Fails at 1-Bit}
@@ -803,7 +775,6 @@ theoretical: realising it in practice demands specialised XNOR-popcount CUDA or 
 kernels, whereas our current code relies on standard PyTorch convolutions operating on
 binary-valued weight tensors.
 
-% ============================================================
 \section{Conclusion}
 
 This paper introduced \textbf{Native Binarization}, a training framework for 1-bit
@@ -832,7 +803,7 @@ cost of maintaining a full-precision teacher.
 \smallskip\noindent\textbf{Code Availability.} Source code and trained checkpoints are
 publicly available at \url{https://github.com/nihal-gazi/Native-Binarization}.
 
-% ============================================================
+
 \bibliographystyle{IEEEtran}
 \bibliography{references}
 
