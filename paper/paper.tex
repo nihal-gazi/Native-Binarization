@@ -1,8 +1,5 @@
-% ============================================================
-%  One Bit is All You Need to Diffuse
-%  Single-Column Paper — IEEEtran class
-% ============================================================
-\documentclass[onecolumn, journal]{IEEEtran}
+
+\documentclass[twocolumn, journal]{IEEEtran}
 
 % ---- Core packages ----
 \usepackage{cite}
@@ -24,10 +21,7 @@
 % ---- Figure sub-panels ----
 \usepackage{subfig}
 
-% ---- Section heading style (bold, left-aligned) ----
-\usepackage{titlesec}
-\titleformat{\section}{\large\bfseries\raggedright}{\thesection.\quad}{0pt}{}
-\titleformat{\subsection}{\normalsize\bfseries\raggedright}{\thesubsection\quad}{0pt}{}
+% titlesec removed — IEEEtran handles section headings natively in twocolumn mode
 
 % ---- Hyperlinks (load last) ----
 \usepackage[hidelinks]{hyperref}
@@ -56,9 +50,6 @@
 \maketitle
 
 % ============================================================
-\renewcommand{\abstractname}{\large\bfseries\raggedright Abstract}
-
-
 \begin{abstract}
 The memory footprint and arithmetic cost of floating-point operations remain the
 principal obstacles to running generative diffusion models on edge hardware. Reducing
