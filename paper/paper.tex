@@ -515,7 +515,7 @@ DDPM objective under a linear noise schedule $\beta \in [10^{-4},\,0.02]$ spanni
 $T=1{,}000$ diffusion steps. The FP16 and W1A16 variants are optimized with
 Adam (lr $=10^{-3}$), while W1A1 uses
 AdamW~\cite{loshchilov2019adamw} (lr $=10^{-4}$). All three are trained for 100 epochs
-on the full MNIST training split (60{,}000 images, $28{\times}28$ grayscale, normalized
+on the full MNIST~\cite{lecun1998mnist} training split (60{,}000 images, $28{\times}28$ grayscale, normalized
 to $[-1,1]$) with a batch size of 16. The time-embedding MLP employs ReLU for FP16 and
 W1A16 and GELU for W1A1. To ensure reproducibility, every reported metric is the mean
 of three independent evaluation runs.
