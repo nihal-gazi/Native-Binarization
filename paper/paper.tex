@@ -1,5 +1,5 @@
 
-\documentclass[twocolumn, journal]{IEEEtran}
+\documentclass[conference]{IEEEtran}
 
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -628,8 +628,8 @@ numerical results.
 
 \begin{figure}[t]
   \centering
-  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/fp16_1.png}}\hfill
-  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/fp16_2.png}}
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../v1-mnist/assets/fp16_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../v1-mnist/assets/fp16_2.png}}
   \caption{ResUNet\_FP16 (full-precision baseline). Generated digits are crisp, varied,
   and clearly committed to individual classes---establishing the quality ceiling against
   which all compressed variants are compared.}
@@ -638,8 +638,8 @@ numerical results.
 
 \begin{figure}[t]
   \centering
-  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a16_our_output_1.png}}\hfill
-  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a16_our_output_2.png}}
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../v1-mnist/assets/w1a16_our_output_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../v1-mnist/assets/w1a16_our_output_2.png}}
   \caption{Natively trained ResUNet\_W1A16 (\textbf{structural dominance}: centered
   1-bit weights, FP16 activations). Both digit structure and class diversity remain
   visually intact, in line with the measured FID of 24.24 and 89.45\% legibility.}
@@ -648,7 +648,7 @@ numerical results.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.45\columnwidth]{../assets/w1a16_quantized_1.png}
+  \includegraphics[width=0.45\columnwidth]{../v1-mnist/assets/w1a16_quantized_1.png}
   \caption{PTQ ResUNet\_W1A16 (FP16 model binarized after training). Outputs exhibit
   pronounced structural degradation and diminished clarity, matching the measured
   FID of 191.94 and 64.92\% legibility---far below the native model, though some
@@ -658,8 +658,8 @@ numerical results.
 
 \begin{figure}[t]
   \centering
-  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a1_our_output_1.png}}\hfill
-  \subfloat{\includegraphics[width=0.35\columnwidth]{../assets/w1a1_our_output_2.png}}
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../v1-mnist/assets/w1a1_our_output_1.png}}\hfill
+  \subfloat{\includegraphics[width=0.35\columnwidth]{../v1-mnist/assets/w1a1_our_output_2.png}}
   \caption{Natively trained ResUNet\_W1A1 (fully 1-bit: binary weights and binary
   activations, pre-activation ordering with clipped STE). Even under all-binary
   computation, digit topology is largely maintained---confirming that
@@ -669,7 +669,7 @@ numerical results.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.45\columnwidth]{../assets/w1a1_quantized_1.png}
+  \includegraphics[width=0.45\columnwidth]{../v1-mnist/assets/w1a1_quantized_1.png}
   \caption{PTQ ResUNet\_W1A1 (FP16 model fully binarized in both weights and activations).
   Activation binarization compounds the weight quantization error, producing additional
   structural degradation beyond that of PTQ W1A16 (Fig.~\ref{fig:w1a16ptq}).}
@@ -678,9 +678,9 @@ numerical results.
 
 \begin{figure}[t]
   \centering
-  \subfloat[FP16]{\includegraphics[width=0.22\columnwidth]{../assets/fp16_1.png}}\hfill
-  \subfloat[W1A16 Native]{\includegraphics[width=0.22\columnwidth]{../assets/w1a16_our_output_1.png}}\hfill
-  \subfloat[W1A1 Native]{\includegraphics[width=0.22\columnwidth]{../assets/w1a1_our_output_1.png}}
+  \subfloat[FP16]{\includegraphics[width=0.22\columnwidth]{../v1-mnist/assets/fp16_1.png}}\hfill
+  \subfloat[W1A16 Native]{\includegraphics[width=0.22\columnwidth]{../v1-mnist/assets/w1a16_our_output_1.png}}\hfill
+  \subfloat[W1A1 Native]{\includegraphics[width=0.22\columnwidth]{../v1-mnist/assets/w1a1_our_output_1.png}}
   \caption{Three-way visual comparison. Quality degrades progressively, in keeping with
   the information-theoretic penalty of deeper quantization: the W1A16 native model
   preserves near-baseline fidelity, while W1A1 native exhibits the characteristic
