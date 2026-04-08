@@ -7,3 +7,12 @@
 *.fls
 *.synctex.gz
 venv
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Model weights
+*.pth
+*.gz
