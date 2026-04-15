@@ -56,6 +56,7 @@ We apply batch normalization *before* the binary activation function (not after)
 
 ## Sample Outputs
 
+### 1. W1A16 Model
 <table>
 <tr>
   <td align="center"><b>FP16 Baseline</b></td>
@@ -66,6 +67,21 @@ We apply batch normalization *before* the binary activation function (not after)
   <td><img src="v1-mnist/assets/fp16_1.png" width="220"/></td>
   <td><img src="v1-mnist/assets/w1a16_our_output_1.png" width="220"/></td>
   <td><img src="v1-mnist/assets/w1a16_quantized_1.png" width="220"/></td>
+</tr>
+</table>
+<br><br>
+
+### 2. W1A1 Model
+<table>
+<tr>
+  <td align="center"><b>FP16 Baseline</b></td>
+  <td align="center"><b>W1A1 Native (ours)</b></td>
+  <td align="center"><b>W1A1 PTQ (collapsed)</b></td>
+</tr>
+<tr>
+  <td><img src="v1-mnist/assets/fp16_1.png" width="220"/></td>
+  <td><img src="v1-mnist/assets/w1a1_our_output_1.png" width="220"/></td>
+  <td><img src="v1-mnist/assets/w1a1_quantized_1.png" width="220"/></td>
 </tr>
 </table>
 
