@@ -63,9 +63,9 @@ We apply batch normalization *before* the binary activation function (not after)
   <td align="center"><b>W1A16 PTQ (collapsed)</b></td>
 </tr>
 <tr>
-  <td><img src="assets/fp16_1.png" width="220"/></td>
-  <td><img src="assets/w1a16_our_output_1.png" width="220"/></td>
-  <td><img src="assets/w1a16_quantized_1.png" width="220"/></td>
+  <td><img src="v1-mnist/assets/fp16_1.png" width="220"/></td>
+  <td><img src="v1-mnist/assets/w1a16_our_output_1.png" width="220"/></td>
+  <td><img src="v1-mnist/assets/w1a16_quantized_1.png" width="220"/></td>
 </tr>
 </table>
 
