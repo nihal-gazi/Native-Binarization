@@ -1,0 +1,21 @@
+import math
+import torch
+import torch.nn as nn
+
+class SinusoidalPositionEmbeddings(nn.Module):
+    """
+    Standard sinusoidal position embeddings mapping timestep tensor of shape (B,)
+    to embedding vectors of shape (B, dim).
+    """
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, time):
+        device = time.device
+        half_dim = self.dim // 2
+        embeddings = math.log(10000) / (half_dim - 1)
+        embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
+        embeddings = time[:, None] * embeddings[None, :]
+        embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
+        return embeddings
