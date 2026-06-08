@@ -29,16 +29,31 @@ The standard method compresses an already-trained model after the fact ("Train, 
 
 ## The Key Results
 
+### v1 — MNIST Digit Generation
+
 | Model | Method | FID ↓ | Legibility ↑ |
 |---|---|---|---|
 | Full Precision (FP16) | Baseline | — | — |
 | **1-Bit Weights (W1A16)** | **Native (ours)** | **24.22** | **89.92%** |
 | 1-Bit Weights (W1A16) | Standard PTQ | 381.79 | 0.00% |
 
-> **FID** measures how realistic the generated images look (lower = better).
-> **Legibility** measures whether generated digits are actually recognizable (higher = better).
+> The standard approach completely collapses — generating random noise (FID 381.79, 0% legibility). Our native approach achieves high digit legibility at **32× less memory** and **58× less compute**.
 
-The standard approach completely collapses — it generates random noise (FID 381.79, 0% legibility). Our native approach matches full-precision quality at **32× less memory** and **58× less compute**.
+### v2 — CelebA Face Generation (Grayscale, 32×32)
+
+All models trained for **100 epochs** on 10,000 aligned grayscale CelebA faces.
+
+| Model Variant | Model Size | FID ↓ | Legibility ↑ | Utility Score ↑ |
+|---|---|---|---|---|
+| FP16 Baseline | 3879.0 KB | 104.17 | 99.98% | 0.00951 |
+| **W1A16 Native (ours)** | **242.4 KB** | **131.07** | **99.98%** | **0.12113** |
+| W1A1 Native (ours) | 242.4 KB | 213.77 | 99.98% | 0.07448 |
+| W1A16 PTQ | 242.4 KB | 284.62 | 99.98% | 0.05601 |
+| W1A1 PTQ | 242.4 KB | 315.61 | 99.94% | 0.05051 |
+
+> **FID** measures distributional realism (lower = better). **Legibility** is the probability a lightweight face classifier detects a coherent face in the output. **Utility Score** = `(Legibility × Compression Factor) / (1 + FID)` — a composite metric that penalizes both quality collapse and poor compression simultaneously.
+>
+> Native W1A16 achieves **16× compression** with only a 27-point FID penalty vs. the full-precision baseline, while PTQ at the same compression ratio degrades FID by 180 points.
 
 ---
 
@@ -56,7 +71,7 @@ We apply batch normalization *before* the binary activation function (not after)
 
 ## Sample Outputs
 
-### 1. W1A16 Model
+### v1 — MNIST: Three-Way Comparison (FP16 / W1A16 / W1A1)
 <table>
 <tr>
   <td align="center"><b>FP16 Baseline</b></td>
@@ -69,9 +84,8 @@ We apply batch normalization *before* the binary activation function (not after)
   <td><img src="v1-mnist/assets/w1a16_quantized_1.png" width="220"/></td>
 </tr>
 </table>
-<br><br>
 
-### 2. W1A1 Model
+### v1 — MNIST: W1A1 Comparison
 <table>
 <tr>
   <td align="center"><b>FP16 Baseline</b></td>
@@ -85,6 +99,9 @@ We apply batch normalization *before* the binary activation function (not after)
 </tr>
 </table>
 
+### v2 — CelebA: Native vs PTQ Comparison
+See [`v2-celeba/outputs/`](v2-celeba/outputs/) for all generated grids, or [`v2-celeba/RESULTS.md`](v2-celeba/RESULTS.md) for the full benchmark report.
+
 ---
 
 ## Repository Structure
@@ -94,73 +111,71 @@ Native-Binarization/
 │
 ├── paper/                  ← Research paper
 │   ├── paper.tex           ← LaTeX source (IEEEtran)
-│   ├── paper.pdf           ← Compiled PDF (7 pages)
+│   ├── paper.pdf           ← Compiled PDF
 │   ├── paper.md            ← Markdown draft
-│   └── references.bib      ← BibTeX bibliography (20 entries)
+│   └── references.bib      ← BibTeX bibliography
 │
-├── assets/                 ← Generated sample images for all model variants
-│   ├── fp16_*.png          ← Full-precision baseline outputs
-│   ├── w1a16_*.png         ← W1A16 native + PTQ outputs
-│   └── w1a1_*.png          ← W1A1 native + PTQ outputs
+├── v1-mnist/               ← MNIST experiment (v1 ablation study)
+│   ├── assets/             ← Generated sample images (all model variants)
+│   ├── code/
+│   │   ├── Trainers/       ← FP16, W1A16, W1A1 training scripts
+│   │   ├── Quantizers/     ← Post-training quantization converters
+│   │   ├── Benchmarks/     ← FID and legibility evaluation
+│   │   └── model_output_generator.py
+│   ├── models/             ← ResUNet architectures + MNISTClassifier
+│   └── pre_trained_models/ ← .pth checkpoints for all variants
 │
-├── code/                   ← All training, quantization, and evaluation scripts
-│   ├── Trainers/           ← Training scripts (FP16, W1A16, W1A1)
-│   ├── Quantizers/         ← Post-training quantization converters
-│   ├── Benchmarks/         ← FID and legibility evaluation scripts
-│   └── model_output_generator.py  ← 3-way visual comparison tool
+├── v2-celeba/              ← CelebA experiment (v2, 100-epoch optimized runs)
+│   ├── code/
+│   │   ├── models/         ← BitConv2d_Std, ResBlock1Bit, ResUNet_FP16/W1A16/W1A1
+│   │   ├── trainers/       ← AMP trainer (base.py) + PTQ converter (ptq.py)
+│   │   ├── benchmarks/     ← FID scorer + face legibility judge
+│   │   ├── samplers/       ← DDPM 1000-step sampler + linear schedule
+│   │   ├── train_fp16_opt.py    ← Optimized FP16 training
+│   │   ├── train_w1a16_opt.py   ← Optimized W1A16 native training
+│   │   ├── train_w1a1_opt.py    ← Optimized W1A1 native training
+│   │   └── run_benchmarks.py   ← Master 5-way benchmark runner
+│   ├── checkpoints/        ← Per-epoch .pth snapshots + final models
+│   ├── outputs/            ← Sample grids + comparison images
+│   └── RESULTS.md          ← Full quantitative benchmark report
 │
-├── models/                 ← Model architecture definitions (Python package)
-│   └── architectures.py    ← ResUNet_FP16, ResUNet_W1A16, ResUNet_W1A1, MNISTClassifier
+├── v2-cifar10/             ← CIFAR-10 experiment (planned)
 │
-├── pre_trained_models/     ← Saved model checkpoints (.pth files)
-│   ├── BNN_W1A1/           ← w1a1.pth (native), fp16_to_w1a1.pth (PTQ)
-│   └── FP16_and_W1A16/     ← fp16.pth, w1a16.pth (native), fp16_to_w1a16.pth (PTQ)
-│
-├── data/                   ← MNIST dataset (~63 MB, auto-downloaded by torchvision)
-│
-└── templates/              ← Paper formatting templates
-    └── format.docx
+└── requirements.txt        ← Python dependencies
 ```
 
 ---
 
 ## Getting Started
 
-**Requirements:** Python 3.8+, PyTorch, torchvision, scipy, tqdm, matplotlib
+**Requirements:** Python 3.8+, PyTorch ≥ 2.0, torchvision, scipy, Pillow, tqdm, matplotlib, opencv-python
 
 ```bash
-# Install the model architecture package
 pip install -e .
 ```
 
-> **Note:** CUDA is strongly recommended — CPU inference across 1,000 timesteps is very slow.
+> **Note:** CUDA is strongly recommended — CPU inference across 1,000 DDPM timesteps is very slow.
 
-**Run FID evaluation:**
+### v1 — MNIST Benchmarks
 ```bash
-python code/Benchmarks/FP16_and_W1A16/fid_check.py
-python code/Benchmarks/BNN_W1A1/bnn_fid_check.py
+python v1-mnist/code/Benchmarks/FP16_and_W1A16/fid_check.py
+python v1-mnist/code/Benchmarks/FP16_and_W1A16/legibility_check.py
+python v1-mnist/code/Benchmarks/BNN_W1A1/bnn_fid_check.py
+python v1-mnist/code/Benchmarks/BNN_W1A1/bnn_legiblitity_check.py
 ```
 
-**Run legibility evaluation:**
+### v2 — CelebA Training + Benchmarks
 ```bash
-python code/Benchmarks/FP16_and_W1A16/legibility_check.py
-python code/Benchmarks/BNN_W1A1/bnn_legiblitity_check.py
+# Train all three native models (100 epochs each)
+python -m v2-celeba.code.train_fp16_opt
+python -m v2-celeba.code.train_w1a16_opt
+python -m v2-celeba.code.train_w1a1_opt
+
+# Run 5-way benchmark → writes RESULTS.md
+python -m v2-celeba.code.run_benchmarks
 ```
 
-**Generate 3-way comparison image (FP16 / W1A16 / W1A1):**
-```bash
-python code/model_output_generator.py
-```
-
-**Pre-trained model naming conventions:**
-
-| File | Description |
-|---|---|
-| `w1a1.pth` | W1A1 trained from scratch (Native Binarization) |
-| `fp16_to_w1a1.pth` | FP16 model post-training quantized to W1A1 (PTQ baseline) |
-| `w1a16.pth` | W1A16 trained from scratch (Native Binarization) |
-| `fp16_to_w1a16.pth` | FP16 model post-training quantized to W1A16 (PTQ baseline) |
-| `fp16.pth` | Full-precision FP16 baseline |
+See [`v2-celeba/README.md`](v2-celeba/README.md) for the full execution guide.
 
 ---
 

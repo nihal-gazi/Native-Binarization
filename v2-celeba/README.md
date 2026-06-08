@@ -1,6 +1,6 @@
-# Native 1-Bit Diffusion on CelebA (W1A16 Ablation Study)
+# Native 1-Bit Diffusion on Grayscale CelebA (Full Ablation Study)
 
-This directory implements a highly optimized, modular, and resilient PyTorch training and ablation pipeline for a **1-Bit Native Diffusion Model (W1A16)** operating on the RGB CelebA dataset. 
+This directory implements a highly optimized, modular, and resilient PyTorch training and ablation pipeline for native 1-bit diffusion models operating on **32×32 grayscale CelebA** face images. It benchmarks five model variants across three quantization strategies: full-precision (FP16), native binarization (W1A16, W1A1), and post-training quantization (W1A16 PTQ, W1A1 PTQ).
 
 ---
 
@@ -14,11 +14,33 @@ Our implementation builds upon the twin theoretical pillars of **Structural Domi
     $$\hat{W}_o = \text{sign}(\bar{W}_o) \cdot \text{mean}(|\bar{W}_o|)$$
     This removes isotropic DC offsets, allowing the binary representation to capture the orientation/geometry of the target score field.
 
-2.  **Topological Stability (Pre-Activation):**
-    Residual block convolutions are preceded by BatchNorm and activation (`BN -> SiLU -> Conv`). This centers activation inputs around zero, ensuring that the gradient through the sign function does not collapse or suffer from dead neurons.
+2.  **Topological Stability (Pre-Activation BatchNorm):**
+    Residual block convolutions are preceded by BatchNorm and activation (`BN → SiLU → Conv`). This centers activation inputs around zero throughout training, preventing dead neurons and gradient starvation — the two primary failure modes in binary networks.
 
 3.  **High-Precision Boundaries:**
-    Input projection ($3 \to 64$ channels) and output projection ($64 \to 3$ channels) remain in full-precision (FP32/FP16) to avoid quantization noise at the boundaries.
+    Input projection (1 → channels) and output projection (channels → 1) remain in full-precision (FP16/FP32) to avoid quantization noise at the network boundaries.
+
+4.  **Landmark-Based Face Alignment (Phase 3+):**
+    All faces are pre-aligned using OpenCV similarity transforms with eye landmarks fixed at `(0.35, 0.40)` and `(0.65, 0.40)` (relative to image dimensions). This eliminates translational variance — a key bottleneck for 1-bit networks which lack the float-precision capacity to learn spatial offsets.
+
+5.  **Double-Filtering:**
+    Images are filtered for attribute homogeneity (using CelebA attributes) and white background corner checks, ensuring a high-signal, low-variance training set.
+
+---
+
+## Quantitative Results
+
+All models trained for **100 epochs** on a 10,000-image grayscale CelebA subset. Optimizer: **AdamW** (`lr=2e-4` for FP16/W1A16, `lr=1e-4` for W1A1). Architecture: U-Net with channels `[128, 256, 512]`.
+
+| Model Variant | Model Size (KB) | FID ↓ | Legibility ↑ | Utility Score ↑ |
+| :--- | :---: | :---: | :---: | :---: |
+| **FP16 Baseline** | 3879.0 KB | 104.17 | 99.98% | 0.00951 |
+| **W1A16 Native** | 242.4 KB | 131.07 | 99.98% | **0.12113** |
+| **W1A1 Native** | 242.4 KB | 213.77 | 99.98% | 0.07448 |
+| **W1A16 PTQ** | 242.4 KB | 284.62 | 99.98% | 0.05601 |
+| **W1A1 PTQ** | 242.4 KB | 315.61 | 99.94% | 0.05051 |
+
+See [`RESULTS.md`](RESULTS.md) for the full benchmark report with three-way comparison tables, the Legibility-per-Bit metric, the Utility Score formula, and fairness rationale.
 
 ---
 
@@ -29,52 +51,97 @@ v2-celeba/
 ├── data/
 │   └── dataset-samples/       # preprocessed dataset visual sanity check
 ├── code/
-│   ├── config.py              # settings, hyperparams, and paths
+│   ├── config.py              # settings, hyperparams, channels, paths
 │   ├── logger.py              # logging setup & VRAM monitor utilities
-│   ├── data_loader.py         # CelebA loader, center crop, and 10k subset
+│   ├── data_loader.py         # CelebA loader + landmark alignment + double-filtering
 │   ├── models/
-│   │   ├── binarization.py    # BitConv2d_Std implementation
-│   │   ├── embed.py           # Sinusoidal position embeddings
-│   │   ├── blocks.py          # ResBlock16 and ResBlock1Bit
-│   │   └── unet.py            # U-Net container classes (FP16 & W1A16)
+│   │   ├── binarization.py    # BitConv2d_Std implementation (mean-centered STE)
+│   │   ├── embed.py           # Sinusoidal timestep embeddings
+│   │   ├── blocks.py          # ResBlock16 (SiLU) and ResBlock1Bit (sign activation)
+│   │   └── unet.py            # U-Net container: ResUNet_FP16, ResUNet_W1A16, ResUNet_W1A1
 │   ├── samplers/
-│   │   ├── schedule.py        # linear noise schedule variables
+│   │   ├── schedule.py        # linear noise schedule (β₁=1e-4 → β_T=0.02)
 │   │   └── ddpm.py            # standard 1000-step DDPM sampler
 │   ├── trainers/
-│   │   ├── base.py            # AMP mixed precision trainer
+│   │   ├── base.py            # AMP mixed-precision trainer (AdamW, real-time ETA logging)
 │   │   └── ptq.py             # post-training binarization converter
-│   ├── test_train.py          # Phase 2 micro-batch overfit executable
-│   └── run_ablation.py        # Phase 3 ablation runner script
-└── README.md                  # academic documentation
+│   ├── benchmarks/
+│   │   ├── fid.py             # Fréchet Inception Distance (FID) scorer
+│   │   └── judge.py           # lightweight CNN face legibility classifier
+│   ├── test_train.py          # Phase 2: micro-batch overfit test (100 images, 300 epochs)
+│   ├── run_ablation.py        # Phase 3: original 20-epoch ablation runner
+│   ├── train_fp16_opt.py      # Optimized FP16 training (AdamW, lr=2e-4, 100 epochs)
+│   ├── train_w1a16_opt.py     # Optimized W1A16 Native training (AdamW, lr=2e-4, 100 epochs)
+│   ├── train_w1a1_opt.py      # W1A1 Native training (AdamW, lr=1e-4, 100 epochs)
+│   └── run_benchmarks.py      # Master 5-way benchmark runner → writes RESULTS.md
+├── checkpoints/               # Saved .pth checkpoints (per-epoch + final)
+├── outputs/                   # Generated sample grids and comparison images
+├── RESULTS.md                 # Benchmarking report (auto-generated by run_benchmarks.py)
+└── README.md                  # This file
 ```
 
 ---
 
 ## Execution Guide
 
-To run the various phases of the ablation study, execute the following commands from the repository root:
+Run all commands from the **repository root** (`Native-Binarization/`).
 
 ### **Phase 1: Data Preparation & Verification**
-Load the CelebA dataset (falling back to manual image directories or synthetic procedural faces if download limits are hit), center-crop, downsample to 32x32, and save a batch of 32 sample images to disk.
+Load grayscale CelebA, apply landmark alignment, double-filter, downsample to 32×32, and save a visual sanity check batch.
 ```bash
 python -m v2-celeba.code.data_loader
 ```
-*Outputs saved to:* `v2-celeba/data/dataset-samples/preprocessed_samples.png`
+*Output:* `v2-celeba/data/dataset-samples/preprocessed_samples.png`
 
-### **Phase 2: Overfitting Micro-Batch (Tiny Test Train)**
-Train/overfit a 1-bit weights model (`ResUNet_W1A16`) on a micro-batch of exactly 100 images for 300 epochs. Generates final samples from the overfit checkpoint to verify that 3-channel spatial geometry is successfully captured by the binarized score field.
+---
+
+### **Phase 2: Overfit Micro-Batch (Sanity Check)**
+Train a W1A16 model on exactly 100 images for 300 epochs to verify the binarized score field captures spatial geometry.
 ```bash
 python -m v2-celeba.code.test_train
 ```
-*Outputs saved to:* `v2-celeba/outputs/tiny_original.png`, `v2-celeba/outputs/tiny_overfit_samples.png`, and `v2-celeba/checkpoints/w1a16_tiny_overfit.pth`
+*Output:* `v2-celeba/outputs/tiny_original.png`, `tiny_overfit_samples.png`, `checkpoints/w1a16_tiny_overfit.pth`
 
-### **Phase 3: Truncated Ablation Study**
-Automate the comparative study across a truncated subset of 10,000 images:
-1. Train an **FP16 Baseline** model for 20 epochs.
-2. Train a **W1A16 Native** model (binarized weights during training) for 20 epochs.
-3. Perform **Post-Training Quantization (PTQ)** on the FP16 Baseline to construct a **W1A16 PTQ** model.
-4. Draw 16 samples from each model and save them as comparison grids.
+---
+
+### **Phase 3: Optimized 100-Epoch Training Runs**
+
+Train each model variant separately using the optimized scripts:
+
 ```bash
-python -m v2-celeba.code.run_ablation
+# FP16 Baseline (AdamW, lr=2e-4, 100 epochs)
+python -m v2-celeba.code.train_fp16_opt
+
+# W1A16 Native Binarization (AdamW, lr=2e-4, 100 epochs)
+python -m v2-celeba.code.train_w1a16_opt
+
+# W1A1 Full Binarization (AdamW, lr=1e-4, 100 epochs — lower LR for sign() stability)
+python -m v2-celeba.code.train_w1a1_opt
 ```
-*Outputs saved to:* checkpoints (`.pth`) under `checkpoints/` and grids (`.png`) under `outputs/`.
+
+*Checkpoints saved to:* `v2-celeba/checkpoints/` with per-epoch snapshots (e.g., `fp16_baseline_epoch_50.pth`).
+
+> **Note on W1A1 LR:** The W1A1 model uses `lr=1e-4` rather than `2e-4`. The `sign()` activation function has a discontinuous gradient, making it sensitive to aggressive learning rates. A lower LR stabilizes convergence without sacrificing final quality.
+
+---
+
+### **Phase 4: 5-Way Benchmark Evaluation**
+Run FID + Legibility scoring across all 5 model variants (FP16, W1A16 Native, W1A1 Native, W1A16 PTQ, W1A1 PTQ) and auto-write results to `RESULTS.md`:
+```bash
+python -m v2-celeba.code.run_benchmarks
+```
+*Output:* Updates `RESULTS.md` with full tables and saves comparison grids to `outputs/`.
+
+---
+
+## Pre-Trained Checkpoint Reference
+
+| File | Description |
+| :--- | :--- |
+| `fp16_baseline.pth` | FP16 Baseline — trained 100 epochs, AdamW `lr=2e-4` |
+| `w1a16_native.pth` | W1A16 Native — binarized weights from scratch, AdamW `lr=2e-4` |
+| `w1a1_native.pth` | W1A1 Native — fully binarized (weights + activations), AdamW `lr=1e-4` |
+| `w1a16_ptq.pth` | W1A16 PTQ — FP16 baseline post-training quantized to 1-bit weights |
+| `w1a16_tiny_overfit.pth` | W1A16 micro-batch overfit checkpoint (Phase 2 sanity check) |
+
+> **Note:** `w1a1_ptq.pth` is generated on-the-fly during `run_benchmarks.py` from `fp16_baseline.pth` and is not stored separately.

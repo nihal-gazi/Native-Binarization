@@ -6,11 +6,11 @@ This report compiles the quantitative benchmark metrics for the models trained f
 
 | Model Variant | Model Size (KB) | FID Distance ↓ | Legibility Score (Face Prob) ↑ | Legibility per Bit (Score/KB) ↑ | Utility Score (Fair Bench) ↑ |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **FP16 Baseline** | 3879.0 KB | 330.31 | 99.94% | 257.6457 × 10⁻⁶ | **0.00302** |
-| **W1A16 Native** | 242.4 KB | 188.53 | 100.00% | 4125.4125 × 10⁻⁶ | **0.08442** |
-| **W1A1 Native** | 242.4 KB | 219.28 | 100.00% | 4125.4061 × 10⁻⁶ | **0.07263** |
-| **W1A16 PTQ** | 242.4 KB | 321.69 | 100.00% | 4125.4125 × 10⁻⁶ | **0.04958** |
-| **W1A1 PTQ** | 242.4 KB | 420.46 | 100.00% | 4125.4125 × 10⁻⁶ | **0.03796** |
+| **FP16 Baseline** | 3879.0 KB | 104.17 | 99.98% | 257.7487 × 10⁻⁶ | **0.00951** |
+| **W1A16 Native** | 242.4 KB | 131.07 | 99.98% | 4124.6306 × 10⁻⁶ | **0.12113** |
+| **W1A1 Native** | 242.4 KB | 213.77 | 99.98% | 4124.6067 × 10⁻⁶ | **0.07448** |
+| **W1A16 PTQ** | 242.4 KB | 284.62 | 99.98% | 4124.6429 × 10⁻⁶ | **0.05601** |
+| **W1A1 PTQ** | 242.4 KB | 315.61 | 99.94% | 4122.9949 × 10⁻⁶ | **0.05051** |
 
 ## 2. Three-Way Comparison Tables
 
@@ -18,9 +18,9 @@ This report compiles the quantitative benchmark metrics for the models trained f
 
 | Model Variant | Model Size (KB) | FID Distance ↓ | Legibility Score (Face Prob) ↑ | Legibility per Bit (Score/KB) ↑ | Utility Score (Fair Bench) ↑ |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **FP16 Baseline** | 3879.0 KB | 330.31 | 99.94% | 257.6457 × 10⁻⁶ | **0.00302** |
-| **W1A16 Native** | 242.4 KB | 188.53 | 100.00% | 4125.4125 × 10⁻⁶ | **0.08442** |
-| **W1A1 Native** | 242.4 KB | 219.28 | 100.00% | 4125.4061 × 10⁻⁶ | **0.07263** |
+| **FP16 Baseline** | 3879.0 KB | 104.17 | 99.98% | 257.7487 × 10⁻⁶ | **0.00951** |
+| **W1A16 Native** | 242.4 KB | 131.07 | 99.98% | 4124.6306 × 10⁻⁶ | **0.12113** |
+| **W1A1 Native** | 242.4 KB | 213.77 | 99.98% | 4124.6067 × 10⁻⁶ | **0.07448** |
 
 **Visual Output Comparison (Aligned Samples):**
 
@@ -30,9 +30,9 @@ This report compiles the quantitative benchmark metrics for the models trained f
 
 | Model Variant | Model Size (KB) | FID Distance ↓ | Legibility Score (Face Prob) ↑ | Legibility per Bit (Score/KB) ↑ | Utility Score (Fair Bench) ↑ |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **FP16 Baseline** | 3879.0 KB | 330.31 | 99.94% | 257.6457 × 10⁻⁶ | **0.00302** |
-| **W1A16 PTQ** | 242.4 KB | 321.69 | 100.00% | 4125.4125 × 10⁻⁶ | **0.04958** |
-| **W1A1 PTQ** | 242.4 KB | 420.46 | 100.00% | 4125.4125 × 10⁻⁶ | **0.03796** |
+| **FP16 Baseline** | 3879.0 KB | 104.17 | 99.98% | 257.7487 × 10⁻⁶ | **0.00951** |
+| **W1A16 PTQ** | 242.4 KB | 284.62 | 99.98% | 4124.6429 × 10⁻⁶ | **0.05601** |
+| **W1A1 PTQ** | 242.4 KB | 315.61 | 99.94% | 4122.9949 × 10⁻⁶ | **0.05051** |
 
 **Visual Output Comparison (Aligned Samples):**
 
