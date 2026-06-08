@@ -16,3 +16,8 @@ __pycache__/
 # Model weights
 *.pth
 *.gz
+
+
+# Dataset
+*.zip
+v2-celeba/data/raw/
